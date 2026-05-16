@@ -1,0 +1,8 @@
+** BUILD FAILED **
+
+
+The following build commands failed:
+	SwiftCompile normal arm64 /Users/budarazvancristian/Documents/Licenta/App/LostAndFound/node_modules/expo/ios/AppDelegates/ExpoReactNativeFactory.swift (in target 'Expo' from project 'Pods')
+	SwiftCompile normal arm64 Compiling\ ExpoReactNativeFactory.swift,\ ExpoReactNativeFactoryDelegate.swift /Users/budarazvancristian/Documents/Licenta/App/LostAndFound/node_modules/expo/ios/AppDelegates/ExpoReactNativeFactory.swift /Users/budarazvancristian/Documents/Licenta/App/LostAndFound/node_modules/expo/ios/AppDelegates/ExpoReactNativeFactoryDelegate.swift (in target 'Expo' from project 'Pods')
+	Building workspace LostAndFound with scheme LostAndFound and configuration Debug
+(3 failures)
