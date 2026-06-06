@@ -12,9 +12,12 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { colors } from "../../constants/colors";
 import { AuthStackParamList } from "../../navigation/AuthNavigator";
+import { RootStackParamList } from "../../navigation/RootNavigator";
 
 const LoginScreen: React.FC = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const navigation = useNavigation<
+    NativeStackNavigationProp<AuthStackParamList & RootStackParamList>
+  >();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -56,7 +59,11 @@ const LoginScreen: React.FC = () => {
               />
             </View>
 
-            <TouchableOpacity style={styles.primaryButton} activeOpacity={0.9}>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate("Main")}
+            >
               <Text style={styles.primaryButtonText}>Log In</Text>
             </TouchableOpacity>
           </View>

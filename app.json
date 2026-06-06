@@ -1,4 +1,7 @@
 {
   "name": "LostAndFound",
-  "displayName": "LostAndFound"
+  "displayName": "LostAndFound",
+  "plugins": [
+    "expo-asset"
+  ]
 }
