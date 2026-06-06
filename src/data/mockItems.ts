@@ -13,6 +13,7 @@ export const lostItems: Item[] = [
     description:
       "Black leather wallet with a slim profile, containing a student ID and a blue metro card.",
     ownerName: "Andrei Popescu",
+    phoneNumber: "+40 712 345 678",
   },
   {
     id: "lost-2",
@@ -26,6 +27,7 @@ export const lostItems: Item[] = [
     description:
       "White AirPods Pro charging case in a matte silicone sleeve, last seen near the study area.",
     ownerName: "Maria Ionescu",
+    phoneNumber: "+40 723 456 789",
   },
   {
     id: "lost-3",
@@ -39,6 +41,7 @@ export const lostItems: Item[] = [
     description:
       "Small silver ring engraved with initials on the inside, sentimental value to the owner.",
     ownerName: "Ioana Marin",
+    phoneNumber: "+40 734 567 890",
   },
 ];
 
@@ -55,6 +58,7 @@ export const foundItems: Item[] = [
     description:
       "Canvas backpack with a laptop sleeve and a reflective stripe, handed in by a commuter.",
     ownerName: "Ana Dumitrescu",
+    phoneNumber: "+40 745 678 901",
   },
   {
     id: "found-2",
@@ -68,6 +72,7 @@ export const foundItems: Item[] = [
     description:
       "Space black iPhone with a clear case and a cracked back corner, currently kept safe by staff.",
     ownerName: "Alex Stoica",
+    phoneNumber: "+40 756 789 012",
   },
   {
     id: "found-3",
@@ -81,6 +86,7 @@ export const foundItems: Item[] = [
     description:
       "Black fitness watch with a fabric strap, found after an evening workout session.",
     ownerName: "Vlad Radu",
+    phoneNumber: "+40 767 890 123",
   },
 ];
 

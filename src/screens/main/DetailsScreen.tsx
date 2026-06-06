@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, Linking, Alert } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -50,8 +50,9 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
           <View style={styles.infoGrid}>
             <InfoCard label="Status" value={item.status} style={styles.infoCard} />
             <InfoCard label="Date" value={item.date} style={styles.infoCard} />
-            <InfoCard label="Owner" value={item.ownerName} style={styles.infoCard} />
-            <InfoCard label="Category" value={item.category} style={styles.infoCard} />
+                <InfoCard label="Owner" value={item.ownerName} style={styles.infoCard} />
+                <InfoCard label="Phone" value={item.phoneNumber} style={styles.infoCard} />
+                <InfoCard label="Category" value={item.category} style={styles.infoCard} />
           </View>
 
           <Text style={styles.sectionTitle}>Description</Text>
@@ -68,11 +69,32 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
             </View>
           </View>
 
-          <AppButton
-            title={item.status === "Lost" ? "Contact owner" : "Send message"}
-            onPress={() => undefined}
-            style={styles.primaryButton}
-          />
+           <AppButton
+             title={item.status === "Lost" ? "Contact owner" : "Send message"}
+             onPress={() => {
+               if (!item.phoneNumber) {
+                 Alert.alert("No phone number", "This post does not have a phone number to contact.");
+                 return;
+               }
+
+               // Remove spaces from phone number for tel: URI scheme
+               const cleanPhoneNumber = item.phoneNumber.replace(/\s/g, "");
+               const url = `tel:${cleanPhoneNumber}`;
+               
+               console.log("Attempting to call:", url);
+               
+               // Try to open the tel: URL
+               // Note: On iOS Simulator, tel: scheme doesn't work
+               Linking.openURL(url).catch((error) => {
+                 console.log("Error opening URL:", error);
+                 Alert.alert(
+                   "Unable to open dialer",
+                   "Your device cannot make phone calls. Try again on a physical device."
+                 );
+               });
+             }}
+             style={styles.primaryButton}
+           />
         </View>
       </ScrollView>
     </View>

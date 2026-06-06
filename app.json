@@ -2,6 +2,7 @@
   "name": "LostAndFound",
   "displayName": "LostAndFound",
   "plugins": [
-    "expo-asset"
+    "expo-asset",
+    "expo-image-picker"
   ]
 }

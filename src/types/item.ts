@@ -10,4 +10,6 @@ export interface Item {
   date: string;
   description: string;
   ownerName: string;
+  // Owner phone number (required for contact)
+  phoneNumber: string;
 }

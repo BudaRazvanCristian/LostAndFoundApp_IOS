@@ -4,6 +4,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { enableScreens } from "react-native-screens";
 
 import { colors } from "./src/constants/colors";
+import { ItemsProvider } from "./src/context/ItemsContext";
 import RootNavigator from "./src/navigation/RootNavigator";
 
 const App: React.FC = () => {
@@ -11,8 +12,10 @@ const App: React.FC = () => {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <RootNavigator />
+      <ItemsProvider>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <RootNavigator />
+      </ItemsProvider>
     </SafeAreaProvider>
   );
 };

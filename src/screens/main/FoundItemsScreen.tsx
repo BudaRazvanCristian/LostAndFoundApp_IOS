@@ -1,7 +1,7 @@
 import React from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import ItemCard from "../../components/ItemCard";
@@ -12,6 +12,10 @@ import type { MainStackParamList } from "../../navigation/MainNavigator";
 
 const FoundItemsScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const route = useRoute();
+
+  // Determine layout based on route params or default to horizontal
+  const layout = (route.params as any)?.layout || "horizontal";
 
   const openDetails = (item: Item) => {
     navigation.navigate("Details", { item });
@@ -22,28 +26,36 @@ const FoundItemsScreen: React.FC = () => {
       <View style={styles.backgroundTop} />
       <View style={styles.backgroundBottom} />
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.badge}>Discover</Text>
-          <Text style={styles.title}>Found Items</Text>
-          <Text style={styles.subtitle}>
-            Browse items that were found and reported by the community.
-          </Text>
-        </View>
+        {layout === "vertical" && (
+          <View style={styles.header}>
+            <Text style={styles.badge}>Discover</Text>
+            <Text style={styles.title}>Found Items</Text>
+            <Text style={styles.subtitle}>
+              Browse items that were found and reported by the community.
+            </Text>
+          </View>
+        )}
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Latest Finds</Text>
-          <Text style={styles.sectionText}>
-            Open any mock found item to preview the modern details screen.
-          </Text>
+        <View style={layout === "vertical" ? styles.card : styles.cardHorizontal}>
+          {layout === "horizontal" && (
+            <>
+              <Text style={styles.sectionTitle}>Latest Finds</Text>
+              <Text style={styles.sectionText}>
+                Open any mock found item to preview the modern details screen.
+              </Text>
 
-          <View style={styles.divider} />
+              <View style={styles.divider} />
+            </>
+          )}
 
           <FlatList
             data={foundItems}
             keyExtractor={(item) => item.id}
-            horizontal
+            horizontal={layout === "horizontal"}
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={layout === "horizontal" ? styles.listContent : styles.listContentVertical}
+            numColumns={layout === "vertical" ? 1 : undefined}
             ItemSeparatorComponent={ItemSeparator}
             renderItem={({ item }) => (
               <ItemCard
@@ -82,7 +94,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.primary,
     opacity: 0.1,
   },
   container: {
@@ -98,8 +110,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: colors.card,
-    color: colors.secondary,
+    backgroundColor: colors.backgroundAlt,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.4,
@@ -117,7 +129,17 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 4,
+  },
+  cardHorizontal: {
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 20,
     shadowColor: "#0F172A",
@@ -134,7 +156,7 @@ const styles = StyleSheet.create({
   },
   sectionText: {
     fontSize: 14,
-    color: colors.mutedText,
+    color: colors.textMuted,
     lineHeight: 20,
   },
   divider: {
@@ -144,6 +166,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 4,
+  },
+  listContentVertical: {
+    paddingBottom: 20,
+    gap: 12,
   },
   listSeparator: {
     width: 12,

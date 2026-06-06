@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import HomeScreen from "../screens/main/HomeScreen";
 import LostItemsScreen from "../screens/main/LostItemsScreen";
+import FoundItemsScreen from "../screens/main/FoundItemsScreen";
 import AddPostScreen from "../screens/main/AddPostScreen";
 import ChatScreen from "../screens/main/ChatScreen";
 import ProfileScreen from "../screens/main/ProfileScreen";
@@ -25,6 +26,8 @@ export type MainTabParamList = {
 export type MainStackParamList = {
   Tabs: undefined;
   Details: { item: Item };
+  AllLostItems: { layout: "vertical" };
+  AllFoundItems: { layout: "vertical" };
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -93,6 +96,18 @@ const MainNavigator: React.FC = () => {
         )}
       </Stack.Screen>
       <Stack.Screen name="Details" component={DetailsScreen} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="AllLostItems"
+        component={LostItemsScreen}
+        options={{ headerShown: false }}
+        initialParams={{ layout: "vertical" }}
+      />
+      <Stack.Screen
+        name="AllFoundItems"
+        component={FoundItemsScreen}
+        options={{ headerShown: false }}
+        initialParams={{ layout: "vertical" }}
+      />
     </Stack.Navigator>
   );
 };

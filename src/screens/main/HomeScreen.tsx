@@ -7,16 +7,25 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import ItemCard from "../../components/ItemCard";
 import ScreenContainer from "../../components/ScreenContainer";
 import { colors } from "../../constants/colors";
+import { useItems } from "../../context/ItemsContext";
 import { radii, spacing } from "../../constants/spacing";
-import { foundItems, lostItems } from "../../data/mockItems";
 import { Item } from "../../types/item";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 
 const HomeScreen: React.FC = () => {
+  const { lostItems, foundItems } = useItems();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
 
   const openDetails = (item: Item) => {
     navigation.navigate("Details", { item });
+  };
+
+  const handleViewAllLost = () => {
+    navigation.navigate("AllLostItems", { layout: "vertical" });
+  };
+
+  const handleViewAllFound = () => {
+    navigation.navigate("AllFoundItems", { layout: "vertical" });
   };
 
   return (
@@ -43,7 +52,9 @@ const HomeScreen: React.FC = () => {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Your lost items</Text>
-        <Text style={styles.sectionLink}>View all</Text>
+        <TouchableOpacity onPress={handleViewAllLost} activeOpacity={0.7}>
+          <Text style={styles.sectionLink}>View all</Text>
+        </TouchableOpacity>
       </View>
       <FlatList
         data={lostItems}
@@ -64,7 +75,9 @@ const HomeScreen: React.FC = () => {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Your found items</Text>
-        <Text style={styles.sectionLink}>View all</Text>
+        <TouchableOpacity onPress={handleViewAllFound} activeOpacity={0.7}>
+          <Text style={styles.sectionLink}>View all</Text>
+        </TouchableOpacity>
       </View>
       <FlatList
         data={foundItems}
@@ -89,8 +102,8 @@ const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   screen: {
     backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.xxxl,
+    paddingTop: spacing.xxxl,
     paddingBottom: spacing.huge,
   },
   header: {
@@ -103,11 +116,13 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "700",
     color: colors.text,
+    marginLeft: 18,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 15,
     color: colors.textMuted,
+    marginLeft: 18,
   },
   iconButton: {
     width: 40,
@@ -122,8 +137,10 @@ const styles = StyleSheet.create({
   banner: {
     backgroundColor: colors.primary,
     borderRadius: radii.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
+    padding: 14,
+    marginBottom: 10,
+    marginLeft: 18,
+    marginRight: 18,
   },
   bannerTitle: {
     fontSize: 18,
@@ -154,20 +171,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
+    marginLeft: 18,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: colors.text,
   },
-  sectionLink: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.textMuted,
-  },
+   sectionLink: {
+     fontSize: 13,
+     fontWeight: "600",
+     color: colors.textMuted,
+     marginRight: 18,
+   },
   listContent: {
+    paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
+    marginLeft: 18,
   },
   listSeparator: {
     width: spacing.md,
