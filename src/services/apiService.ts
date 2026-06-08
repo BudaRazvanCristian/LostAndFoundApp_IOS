@@ -1,13 +1,12 @@
 /**
- * API Service - Communicates with Node.js/Express Backend
- * Replaces Firebase with HTTP calls using JWT tokens
+ * API Service - Communicates with Node.js/Express Backend using JWT tokens
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Item } from "../types/item";
+import { API_URL } from "../config/api";
 
-// API Base URL - Change this to your backend URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = API_URL;
 
 // Helper to get JWT token from storage
 const getAuthToken = async (): Promise<string | null> => {
@@ -29,6 +28,7 @@ const apiCall = async (
   try {
     const headers: any = {
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
       ...options.headers,
     };
 
@@ -163,7 +163,7 @@ export const createPost = async (post: Omit<Item, "id">): Promise<string> => {
   return data.post.id;
 };
 
-export const getAllPosts = async (status?: string, category?: string): Promise<(Item & { firebaseId: string })[]> => {
+export const getAllPosts = async (status?: string, category?: string): Promise<Item[]> => {
   let endpoint = "/posts";
   const params = new URLSearchParams();
 
@@ -180,42 +180,30 @@ export const getAllPosts = async (status?: string, category?: string): Promise<(
     false  // Public endpoint
   );
 
-  return data.posts.map((post: any) => ({
-    id: post.id,
-    firebaseId: post.id,
-    ...post,
-  }));
+  return data.posts.map((post: any) => ({ ...post, id: post.id }));
 };
 
-export const getPostsByUser = async (userId: string): Promise<(Item & { firebaseId: string })[]> => {
+export const getPostsByUser = async (userId: string): Promise<Item[]> => {
   const data = await apiCall(
     `/posts/user/${userId}`,
     { method: "GET" },
     false
   );
 
-  return data.posts.map((post: any) => ({
-    id: post.id,
-    firebaseId: post.id,
-    ...post,
-  }));
+  return data.posts.map((post: any) => ({ ...post, id: post.id }));
 };
 
-export const getPostsByStatus = async (status: "Lost" | "Found"): Promise<(Item & { firebaseId: string })[]> => {
+export const getPostsByStatus = async (status: "Lost" | "Found"): Promise<Item[]> => {
   const data = await apiCall(
     `/posts?status=${status}`,
     { method: "GET" },
     false
   );
 
-  return data.posts.map((post: any) => ({
-    id: post.id,
-    firebaseId: post.id,
-    ...post,
-  }));
+  return data.posts.map((post: any) => ({ ...post, id: post.id }));
 };
 
-export const getPost = async (postId: string): Promise<(Item & { firebaseId: string }) | null> => {
+export const getPost = async (postId: string): Promise<Item | null> => {
   try {
     const data = await apiCall(
       `/posts/posts/${postId}`,
@@ -223,11 +211,7 @@ export const getPost = async (postId: string): Promise<(Item & { firebaseId: str
       false
     );
 
-    return {
-      id: data.post.id,
-      firebaseId: data.post.id,
-      ...data.post,
-    };
+    return { ...data.post, id: data.post.id };
   } catch (error) {
     console.error("Error fetching post:", error);
     return null;

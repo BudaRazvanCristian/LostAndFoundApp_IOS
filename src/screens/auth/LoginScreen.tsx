@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -13,11 +15,35 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors } from "../../constants/colors";
 import { AuthStackParamList } from "../../navigation/AuthNavigator";
 import { RootStackParamList } from "../../navigation/RootNavigator";
+import { useAuth } from "../../context/AuthContext";
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<
     NativeStackNavigationProp<AuthStackParamList & RootStackParamList>
   >();
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please enter email and password.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await login(email.trim(), password);
+      navigation.navigate("Main");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Login failed";
+      Alert.alert("Login Failed", message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -44,6 +70,8 @@ const LoginScreen: React.FC = () => {
                 autoCapitalize="none"
                 autoCorrect={false}
                 textContentType="emailAddress"
+                value={email}
+                onChangeText={setEmail}
               />
             </View>
 
@@ -56,15 +84,22 @@ const LoginScreen: React.FC = () => {
                 secureTextEntry
                 autoCapitalize="none"
                 textContentType="password"
+                value={password}
+                onChangeText={setPassword}
               />
             </View>
 
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.primaryButton, isLoading && styles.primaryButtonDisabled]}
               activeOpacity={0.9}
-              onPress={() => navigation.navigate("Main")}
+              onPress={handleLogin}
+              disabled={isLoading}
             >
-              <Text style={styles.primaryButtonText}>Log In</Text>
+              {isLoading ? (
+                <ActivityIndicator color={colors.card} />
+              ) : (
+                <Text style={styles.primaryButtonText}>Log In</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -81,128 +116,25 @@ const LoginScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  backgroundTop: {
-    position: "absolute",
-    top: -120,
-    right: -80,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: colors.primary,
-    opacity: 0.12,
-  },
-  backgroundBottom: {
-    position: "absolute",
-    bottom: -140,
-    left: -60,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: colors.primary,
-    opacity: 0.1,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 28,
-  },
-  header: {
-    marginBottom: 28,
-  },
-  badge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: colors.card,
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.4,
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.mutedText,
-    lineHeight: 22,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 4,
-  },
-  form: {
-    gap: 16,
-  },
-  field: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.text,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    backgroundColor: colors.background,
-    color: colors.text,
-  },
-  primaryButton: {
-    marginTop: 4,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.primary,
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
-  },
-  primaryButtonText: {
-    color: colors.card,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  footer: {
-    marginTop: "auto",
-    paddingVertical: 24,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 6,
-  },
-  footerText: {
-    color: colors.mutedText,
-    fontSize: 14,
-  },
-  linkText: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  backgroundTop: { position: "absolute", top: -120, right: -80, width: 240, height: 240, borderRadius: 120, backgroundColor: colors.primary, opacity: 0.12 },
+  backgroundBottom: { position: "absolute", bottom: -140, left: -60, width: 260, height: 260, borderRadius: 130, backgroundColor: colors.primary, opacity: 0.1 },
+  container: { flex: 1, paddingHorizontal: 24, paddingTop: 28 },
+  header: { marginBottom: 28 },
+  badge: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.card, color: colors.primary, fontSize: 12, fontWeight: "700", letterSpacing: 0.4, marginBottom: 12 },
+  title: { fontSize: 30, fontWeight: "700", color: colors.text, marginBottom: 8 },
+  subtitle: { fontSize: 16, color: colors.mutedText, lineHeight: 22 },
+  card: { backgroundColor: colors.card, borderRadius: 20, padding: 20, shadowColor: "#0F172A", shadowOpacity: 0.08, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 4 },
+  form: { gap: 16 },
+  field: { gap: 8 },
+  label: { fontSize: 13, fontWeight: "600", color: colors.text, textTransform: "uppercase", letterSpacing: 0.6 },
+  input: { height: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 14, backgroundColor: colors.background, color: colors.text },
+  primaryButton: { marginTop: 4, height: 52, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", shadowColor: colors.primary, shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
+  primaryButtonDisabled: { opacity: 0.6 },
+  primaryButtonText: { color: colors.card, fontSize: 16, fontWeight: "700" },
+  footer: { marginTop: "auto", paddingVertical: 24, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6 },
+  footerText: { color: colors.mutedText, fontSize: 14 },
+  linkText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
 });
 
 export default LoginScreen;

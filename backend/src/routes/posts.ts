@@ -51,7 +51,8 @@ router.post("/", verifyToken, async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Post creation error:", error);
-    return res.status(500).json({ error: "Failed to create post" });
+    const message = error instanceof Error ? error.message : "Failed to create post";
+    return res.status(500).json({ error: message });
   }
 });
 

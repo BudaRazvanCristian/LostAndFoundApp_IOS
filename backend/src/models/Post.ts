@@ -38,7 +38,6 @@ const PostSchema = new Schema<IPost>(
     category: {
       type: String,
       required: [true, "Category is required"],
-      enum: ["Electronics", "Accessories", "Jewelry", "Bags", "Wearables", "Other"],
     },
     location: {
       type: String,
@@ -63,7 +62,7 @@ const PostSchema = new Schema<IPost>(
     },
     imageUri: {
       type: String,
-      required: [true, "Image URI is required"],
+      default: "",
     },
   },
   {
