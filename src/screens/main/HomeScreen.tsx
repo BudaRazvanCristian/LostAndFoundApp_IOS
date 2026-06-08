@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import ItemCard from "../../components/ItemCard";
@@ -13,8 +13,14 @@ import { Item } from "../../types/item";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 
 const HomeScreen: React.FC = () => {
-  const { lostItems, foundItems } = useItems();
+  const { lostItems, foundItems, refreshItems } = useItems();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshItems().catch(() => undefined);
+    }, [refreshItems]),
+  );
 
   const openDetails = (item: Item) => {
     navigation.navigate("Details", { item });

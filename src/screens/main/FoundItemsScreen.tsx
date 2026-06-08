@@ -1,18 +1,26 @@
-import React from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import React, { useCallback } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import ItemCard from "../../components/ItemCard";
 import { colors } from "../../constants/colors";
-import { foundItems } from "../../data/mockItems";
+import { useItems } from "../../context/ItemsContext";
 import { Item } from "../../types/item";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 
 const FoundItemsScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const route = useRoute();
+  const { foundItems, isLoading, error, refreshItems } = useItems();
 
   // Determine layout based on route params or default to horizontal
   const layout = (route.params as any)?.layout || "horizontal";
@@ -20,6 +28,12 @@ const FoundItemsScreen: React.FC = () => {
   const openDetails = (item: Item) => {
     navigation.navigate("Details", { item });
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshItems().catch(() => undefined);
+    }, [refreshItems]),
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -41,31 +55,54 @@ const FoundItemsScreen: React.FC = () => {
             <>
               <Text style={styles.sectionTitle}>Latest Finds</Text>
               <Text style={styles.sectionText}>
-                Open any mock found item to preview the modern details screen.
+                Open any community found item and check the full details.
               </Text>
 
               <View style={styles.divider} />
             </>
           )}
 
-          <FlatList
-            data={foundItems}
-            keyExtractor={(item) => item.id}
-            horizontal={layout === "horizontal"}
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={layout === "horizontal" ? styles.listContent : styles.listContentVertical}
-            numColumns={layout === "vertical" ? 1 : undefined}
-            ItemSeparatorComponent={ItemSeparator}
-            renderItem={({ item }) => (
-              <ItemCard
-                title={item.title}
-                imageUri={item.imageUri}
-                status={item.status}
-                onPress={() => openDetails(item)}
-              />
-            )}
-          />
+          {isLoading ? (
+            <View style={styles.feedbackWrap}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.feedbackText}>Loading found items...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.feedbackWrap}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={foundItems}
+              keyExtractor={(item) => item.id}
+              horizontal={layout === "horizontal"}
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={layout === "horizontal" ? styles.listContent : styles.listContentVertical}
+              numColumns={layout === "vertical" ? 1 : undefined}
+              ItemSeparatorComponent={ItemSeparator}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isLoading}
+                  onRefresh={refreshItems}
+                  tintColor={colors.primary}
+                />
+              }
+              ListEmptyComponent={
+                <View style={styles.feedbackWrap}>
+                  <Text style={styles.feedbackText}>No found items yet.</Text>
+                </View>
+              }
+              renderItem={({ item }) => (
+                <ItemCard
+                  title={item.title}
+                  imageUri={item.imageUri}
+                  status={item.status}
+                  onPress={() => openDetails(item)}
+                />
+              )}
+            />
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -174,9 +211,23 @@ const styles = StyleSheet.create({
   listSeparator: {
     width: 12,
   },
+  feedbackWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+    gap: 8,
+  },
+  feedbackText: {
+    color: colors.textMuted,
+    fontSize: 14,
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: 14,
+    textAlign: "center",
+  },
 });
 
 const ItemSeparator = () => <View style={styles.listSeparator} />;
 
 export default FoundItemsScreen;
-
