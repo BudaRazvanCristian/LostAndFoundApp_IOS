@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, Linking, Alert } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,11 +8,49 @@ import InfoCard from "../../components/InfoCard";
 import { colors } from "../../constants/colors";
 import { radii, shadows, spacing } from "../../constants/spacing";
 import { MainStackParamList } from "../../navigation/MainNavigator";
+import { useAuth } from "../../context/AuthContext";
+import { useItems } from "../../context/ItemsContext";
+import * as apiService from "../../services/apiService";
 
 type DetailsScreenProps = NativeStackScreenProps<MainStackParamList, "Details">;
 
 const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
   const { item } = route.params;
+  const { user } = useAuth();
+  const { refreshItems } = useItems();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isOwner = useMemo(() => {
+    return Boolean(user?.id && item.userId && user.id === item.userId);
+  }, [item.userId, user?.id]);
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete post",
+      "Are you sure you want to delete this post? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsDeleting(true);
+              await apiService.deletePost(item.id);
+              await refreshItems();
+              Alert.alert("Post deleted", "Your post was deleted successfully.");
+              navigation.goBack();
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Failed to delete post";
+              Alert.alert("Delete failed", message);
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <View style={styles.screen}>
@@ -95,6 +133,16 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
              }}
              style={styles.primaryButton}
            />
+
+          {isOwner && (
+            <AppButton
+              title={isDeleting ? "Deleting..." : "Delete post"}
+              onPress={handleDelete}
+              variant="danger"
+              disabled={isDeleting}
+              style={styles.deleteButton}
+            />
+          )}
         </View>
       </ScrollView>
     </View>
@@ -254,7 +302,9 @@ const styles = StyleSheet.create({
   primaryButton: {
     marginTop: spacing.xs,
   },
+  deleteButton: {
+    marginTop: spacing.sm,
+  },
 });
 
 export default DetailsScreen;
-

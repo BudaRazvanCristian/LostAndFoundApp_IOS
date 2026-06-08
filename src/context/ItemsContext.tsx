@@ -65,6 +65,7 @@ export const ItemsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const newItem: Item = {
           ...item,
           id: postId,
+          userId: user?.id,
         };
 
         setItems((current) => [newItem, ...current]);
@@ -75,7 +76,7 @@ export const ItemsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         throw err;
       }
     },
-    [isAuthenticated]
+    [isAuthenticated, user]
   );
 
   const value = useMemo(() => {

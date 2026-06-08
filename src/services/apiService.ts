@@ -46,10 +46,14 @@ const apiCall = async (
       headers,
     });
 
-    const data = await response.json();
+    const data: unknown = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || "API call failed");
+      const errorMessage =
+        typeof data === "object" && data !== null && "error" in data
+          ? String((data as { error?: unknown }).error || "API call failed")
+          : "API call failed";
+      throw new Error(errorMessage);
     }
 
     return data;
@@ -58,6 +62,21 @@ const apiCall = async (
     throw error;
   }
 };
+
+const extractUserId = (userField: any): string | undefined => {
+  if (!userField) return undefined;
+  if (typeof userField === "string") return userField;
+  if (typeof userField === "object") {
+    return userField._id || userField.id;
+  }
+  return undefined;
+};
+
+const mapPostToItem = (post: any): Item => ({
+  ...post,
+  id: post.id,
+  userId: extractUserId(post.userId),
+});
 
 /**
  * AUTHENTICATION SERVICES
@@ -180,7 +199,7 @@ export const getAllPosts = async (status?: string, category?: string): Promise<I
     false  // Public endpoint
   );
 
-  return data.posts.map((post: any) => ({ ...post, id: post.id }));
+  return data.posts.map(mapPostToItem);
 };
 
 export const getPostsByUser = async (userId: string): Promise<Item[]> => {
@@ -190,7 +209,7 @@ export const getPostsByUser = async (userId: string): Promise<Item[]> => {
     false
   );
 
-  return data.posts.map((post: any) => ({ ...post, id: post.id }));
+  return data.posts.map(mapPostToItem);
 };
 
 export const getPostsByStatus = async (status: "Lost" | "Found"): Promise<Item[]> => {
@@ -200,7 +219,7 @@ export const getPostsByStatus = async (status: "Lost" | "Found"): Promise<Item[]
     false
   );
 
-  return data.posts.map((post: any) => ({ ...post, id: post.id }));
+  return data.posts.map(mapPostToItem);
 };
 
 export const getPost = async (postId: string): Promise<Item | null> => {
@@ -211,7 +230,7 @@ export const getPost = async (postId: string): Promise<Item | null> => {
       false
     );
 
-    return { ...data.post, id: data.post.id };
+    return mapPostToItem(data.post);
   } catch (error) {
     console.error("Error fetching post:", error);
     return null;
@@ -254,4 +273,3 @@ export default {
   updatePost,
   deletePost,
 };
-
