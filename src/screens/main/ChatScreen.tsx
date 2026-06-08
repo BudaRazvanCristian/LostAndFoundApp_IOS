@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.primary,
     opacity: 0.1,
   },
   container: {
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     backgroundColor: colors.card,
-    color: colors.secondary,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.4,

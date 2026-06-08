@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: colors.backgroundAlt,
+    backgroundColor: colors.backgroundDark,
     color: colors.primary,
     fontSize: 12,
     fontWeight: "700",

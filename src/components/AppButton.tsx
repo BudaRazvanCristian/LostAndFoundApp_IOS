@@ -8,19 +8,22 @@ import {
 } from "react-native";
 
 import { colors } from "../constants/colors";
+import { shadows, radii } from "../constants/spacing";
 
-export type AppButtonVariant = "primary" | "secondary" | "danger";
+export type AppButtonVariant = "primary" | "secondary" | "danger" | "outline";
 
 export interface AppButtonProps extends TouchableOpacityProps {
   title: string;
   onPress: (event: GestureResponderEvent) => void;
   variant?: AppButtonVariant;
+  size?: "small" | "medium" | "large";
 }
 
 const AppButton: React.FC<AppButtonProps> = ({
   title,
   onPress,
   variant = "primary",
+  size = "medium",
   disabled,
   style,
   ...rest
@@ -29,16 +32,17 @@ const AppButton: React.FC<AppButtonProps> = ({
     <TouchableOpacity
       style={[
         styles.base,
+        sizeStyles[size],
         stylesByVariant[variant],
         disabled && styles.disabled,
         style,
       ]}
-      activeOpacity={0.9}
+      activeOpacity={disabled ? 1 : 0.85}
       onPress={onPress}
       disabled={disabled}
       {...rest}
     >
-      <Text style={[styles.text, textStylesByVariant[variant], disabled && styles.textDisabled]}>
+      <Text style={[styles.text, textSizeStyles[size], textStylesByVariant[variant], disabled && styles.textDisabled]}>
         {title}
       </Text>
     </TouchableOpacity>
@@ -47,25 +51,46 @@ const AppButton: React.FC<AppButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    height: 52,
-    borderRadius: 14,
+    borderRadius: radii.lg,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    ...shadows.md,
   },
   text: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   textDisabled: {
-    color: colors.mutedText,
+    color: colors.disabled,
+  },
+});
+
+const sizeStyles = StyleSheet.create({
+  small: {
+    height: 40,
+    paddingHorizontal: 12,
+  },
+  medium: {
+    height: 48,
+    paddingHorizontal: 16,
+  },
+  large: {
+    height: 56,
+    paddingHorizontal: 20,
+  },
+});
+
+const textSizeStyles = StyleSheet.create({
+  small: {
+    fontSize: 14,
+  },
+  medium: {
+    fontSize: 16,
+  },
+  large: {
+    fontSize: 18,
   },
 });
 
@@ -74,9 +99,14 @@ const stylesByVariant = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   secondary: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.backgroundDark,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  outline: {
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
   danger: {
     backgroundColor: colors.danger,
@@ -85,13 +115,16 @@ const stylesByVariant = StyleSheet.create({
 
 const textStylesByVariant = StyleSheet.create({
   primary: {
-    color: colors.card,
+    color: colors.textInverse,
   },
   secondary: {
     color: colors.text,
   },
+  outline: {
+    color: colors.primary,
+  },
   danger: {
-    color: colors.card,
+    color: colors.textInverse,
   },
 });
 

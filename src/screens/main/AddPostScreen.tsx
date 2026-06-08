@@ -21,6 +21,7 @@ import AppButton from "../../components/AppButton";
 import { colors } from "../../constants/colors";
 import { radii, shadows, spacing } from "../../constants/spacing";
 import { useItems } from "../../context/ItemsContext";
+import { useAuth } from "../../context/AuthContext";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { ItemStatus } from "../../types/item";
 
@@ -29,6 +30,7 @@ const statusOptions: ItemStatus[] = ["Lost", "Found"];
 const AddPostScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { addItem } = useItems();
+  const { user, isAuthenticated } = useAuth();
 
   const [status, setStatus] = useState<ItemStatus>("Lost");
   const [title, setTitle] = useState("");
@@ -36,8 +38,8 @@ const AddPostScreen: React.FC = () => {
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
-  const [ownerName, setOwnerName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [ownerName, setOwnerName] = useState(user?.displayName || "");
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -102,7 +104,12 @@ const AddPostScreen: React.FC = () => {
     }
   };
 
-  const submitPost = () => {
+  const submitPost = async () => {
+    if (!isAuthenticated) {
+      Alert.alert("Not authenticated", "You must log in to create a post.");
+      return;
+    }
+
     if (!canSubmit || !imageUri) {
       Alert.alert("Complete the form", "Please add an image and fill in all details.");
       return;
@@ -110,36 +117,39 @@ const AddPostScreen: React.FC = () => {
 
     setIsSubmitting(true);
 
-    const createdItem = addItem({
-      title: title.trim(),
-      imageUri,
-      status,
-      category: category.trim(),
-      location: location.trim(),
-      date: date.trim(),
-      description: description.trim(),
-      ownerName: ownerName.trim(),
+    try {
+      const postId = await addItem({
+        title: title.trim(),
+        imageUri,
+        status,
+        category: category.trim(),
+        location: location.trim(),
+        date: date.trim(),
+        description: description.trim(),
+        ownerName: ownerName.trim(),
         phoneNumber: phoneNumber.trim(),
-    });
+      });
 
-    setIsSubmitting(false);
-    Alert.alert("Post created", "Your item was added to the home screen.", [
-      {
-        text: "View post",
-        onPress: () => navigation.navigate("Details", { item: createdItem }),
-      },
-      { text: "OK" },
-    ]);
+      Alert.alert("Post created", "Your item was added successfully.", [
+        { text: "OK" },
+      ]);
 
-    setTitle("");
-    setCategory("");
-    setLocation("");
-    setDate("");
-    setDescription("");
-    setOwnerName("");
-    setPhoneNumber("");
-    setImageUri(null);
-    setStatus("Lost");
+      // Reset form
+      setTitle("");
+      setCategory("");
+      setLocation("");
+      setDate("");
+      setDescription("");
+      setOwnerName(user?.displayName || "");
+      setPhoneNumber(user?.phone || "");
+      setImageUri(null);
+      setStatus("Lost");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      Alert.alert("Error creating post", errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

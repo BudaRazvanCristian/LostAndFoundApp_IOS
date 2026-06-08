@@ -21,19 +21,23 @@ const InfoCard: React.FC<InfoCardProps> = ({ label, value, style }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundDark,
     borderRadius: radii.lg,
     padding: spacing.md,
-    ...shadows.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.xs,
   },
   label: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.textMuted,
     marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
   value: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: colors.text,
   },

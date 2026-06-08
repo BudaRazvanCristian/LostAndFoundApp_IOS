@@ -35,19 +35,20 @@ const ItemCard: React.FC<ItemCardProps> = ({ title, imageUri, status, onPress })
 
 const styles = StyleSheet.create({
   card: {
-    width: 168,
+    width: 160,
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     overflow: "hidden",
-    ...shadows.card,
+    ...shadows.md,
   },
   cardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.985 }],
+    opacity: 0.92,
+    transform: [{ scale: 0.97 }],
   },
   image: {
     width: "100%",
-    height: 110,
+    height: 120,
+    backgroundColor: colors.backgroundDark,
   },
   content: {
     padding: spacing.md,
@@ -63,10 +64,10 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: radii.full,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    borderColor: colors.primaryLight,
   },
   badgeText: {
     fontSize: 11,
