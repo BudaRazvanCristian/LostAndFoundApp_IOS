@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/database";
 import authRoutes from "./routes/auth";
 import postRoutes from "./routes/posts";
+import chatRoutes from "./routes/chats";
 
 // Load environment variables
 dotenv.config();
@@ -28,6 +29,7 @@ app.use(cors(corsOptions));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/chats", chatRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -35,7 +37,7 @@ app.get("/health", (req, res) => {
 });
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("Error:", err);
   res.status(err.status || 500).json({
     error: err.message || "Internal server error",
@@ -58,5 +60,4 @@ startServer().catch((error) => {
   process.exit(1);
 });
 
-export default app;
 

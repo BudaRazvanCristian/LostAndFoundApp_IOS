@@ -11,6 +11,8 @@ import AddPostScreen from "../screens/main/AddPostScreen";
 import ChatScreen from "../screens/main/ChatScreen";
 import ProfileScreen from "../screens/main/ProfileScreen";
 import DetailsScreen from "../screens/main/DetailsScreen";
+import ChatThreadScreen from "../screens/main/ChatThreadScreen";
+import EditPostScreen from "../screens/main/EditPostScreen";
 import { colors } from "../constants/colors";
 import { radii, shadows, spacing } from "../constants/spacing";
 import { Item } from "../types/item";
@@ -26,12 +28,38 @@ export type MainTabParamList = {
 export type MainStackParamList = {
   Tabs: undefined;
   Details: { item: Item };
+  ChatThread: { conversationId: string; otherUserName?: string; postTitle?: string };
+  EditPost: { item: Item };
   AllLostItems: { layout: "vertical" };
   AllFoundItems: { layout: "vertical" };
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
+
+const tabIconMap: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = {
+  Home: "home",
+  Search: "search",
+  AddPost: "add",
+  Inbox: "chatbubble-ellipses",
+  Profile: "person",
+};
+
+const renderTabIcon = (
+  routeName: keyof MainTabParamList,
+  color: string,
+  size: number,
+) => {
+  if (routeName === "AddPost") {
+    return null;
+  }
+
+  return <Ionicons name={tabIconMap[routeName]} size={size} color={color} />;
+};
+
+const renderAddPostTabButton = (props: BottomTabBarButtonProps) => (
+  <AddPostTabButton {...props} />
+);
 
 const AddPostTabButton: React.FC<BottomTabBarButtonProps> = ({ onPress }) => {
   return (
@@ -63,21 +91,7 @@ const MainNavigator: React.FC = () => {
               tabBarStyle: styles.tabBar,
               tabBarLabelStyle: styles.tabLabel,
               tabBarItemStyle: styles.tabItem,
-              tabBarIcon: ({ color, size }) => {
-                const iconMap: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = {
-                  Home: "home",
-                  Search: "search",
-                  AddPost: "add",
-                  Inbox: "chatbubble-ellipses",
-                  Profile: "person",
-                };
-
-                if (route.name === "AddPost") {
-                  return null;
-                }
-
-                return <Ionicons name={iconMap[route.name]} size={size} color={color} />;
-              },
+              tabBarIcon: ({ color, size }) => renderTabIcon(route.name, color, size),
             })}
           >
             <Tab.Screen name="Home" component={HomeScreen} options={{ title: "Home" }} />
@@ -87,7 +101,7 @@ const MainNavigator: React.FC = () => {
               component={AddPostScreen}
               options={{
                 title: "",
-                tabBarButton: (props) => <AddPostTabButton {...props} />,
+                tabBarButton: renderAddPostTabButton,
               }}
             />
             <Tab.Screen name="Inbox" component={ChatScreen} options={{ title: "Inbox" }} />
@@ -96,6 +110,8 @@ const MainNavigator: React.FC = () => {
         )}
       </Stack.Screen>
       <Stack.Screen name="Details" component={DetailsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ChatThread" component={ChatThreadScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="EditPost" component={EditPostScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="AllLostItems"
         component={LostItemsScreen}

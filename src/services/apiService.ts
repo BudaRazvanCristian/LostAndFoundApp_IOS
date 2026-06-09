@@ -4,19 +4,17 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Item } from "../types/item";
+import { ChatConversation, ChatMessage } from "../types/chat";
 import { API_URL } from "../config/api";
 
 const API_BASE_URL = API_URL;
 
 // Helper to get JWT token from storage
 const getAuthToken = async (): Promise<string | null> => {
-  try {
-    const token = await AsyncStorage.getItem("authToken");
-    return token;
-  } catch (error) {
+  return AsyncStorage.getItem("authToken").catch((error) => {
     console.error("Error getting auth token:", error);
     return null;
-  }
+  });
 };
 
 // Helper for API calls with JWT
@@ -25,42 +23,37 @@ const apiCall = async (
   options: RequestInit = {},
   requireAuth = true
 ): Promise<any> => {
-  try {
-    const headers: any = {
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
-      ...options.headers,
-    };
+  const headers: any = {
+    "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
+    ...options.headers,
+  };
 
-    // Add JWT token if required
-    if (requireAuth) {
-      const token = await getAuthToken();
-      if (!token) {
-        throw new Error("Not authenticated");
-      }
-      headers.Authorization = `Bearer ${token}`;
+  // Add JWT token if required
+  if (requireAuth) {
+    const token = await getAuthToken();
+    if (!token) {
+      throw new Error("Not authenticated");
     }
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    const data: unknown = await response.json();
-
-    if (!response.ok) {
-      const errorMessage =
-        typeof data === "object" && data !== null && "error" in data
-          ? String((data as { error?: unknown }).error || "API call failed")
-          : "API call failed";
-      throw new Error(errorMessage);
-    }
-
-    return data;
-  } catch (error) {
-    console.error(`API Error [${endpoint}]:`, error);
-    throw error;
+    headers.Authorization = `Bearer ${token}`;
   }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  const data: unknown = await response.json();
+
+  if (!response.ok) {
+    const errorMessage =
+      typeof data === "object" && data !== null && "error" in data
+        ? String((data as { error?: unknown }).error || "API call failed")
+        : "API call failed";
+    throw new Error(errorMessage);
+  }
+
+  return data;
 };
 
 const extractUserId = (userField: any): string | undefined => {
@@ -76,6 +69,46 @@ const mapPostToItem = (post: any): Item => ({
   ...post,
   id: post.id,
   userId: extractUserId(post.userId),
+});
+
+const mapChatUser = (user: any) => ({
+  id: extractUserId(user),
+  displayName: user?.displayName,
+  profileImage: user?.profileImage ?? null,
+  email: user?.email,
+});
+
+const mapChatConversation = (conversation: any): ChatConversation => ({
+  id: conversation.id,
+  postId: conversation.postId
+    ? {
+        id: conversation.postId.id || conversation.postId._id,
+        title: conversation.postId.title,
+        status: conversation.postId.status,
+        imageUri: conversation.postId.imageUri ?? null,
+        userId: extractUserId(conversation.postId.userId),
+      }
+    : null,
+  participants: Array.isArray(conversation.participants)
+    ? conversation.participants.map(mapChatUser)
+    : [],
+  otherUser: conversation.otherUser ? mapChatUser(conversation.otherUser) : null,
+  lastMessage: conversation.lastMessage || "",
+  lastMessageAt: conversation.lastMessageAt || null,
+  lastMessageSenderId: conversation.lastMessageSenderId
+    ? mapChatUser(conversation.lastMessageSenderId)
+    : null,
+  createdAt: conversation.createdAt,
+  updatedAt: conversation.updatedAt,
+});
+
+const mapChatMessage = (message: any): ChatMessage => ({
+  id: message.id,
+  conversationId: message.conversationId,
+  senderId: message.senderId ? mapChatUser(message.senderId) : null,
+  text: message.text,
+  createdAt: message.createdAt,
+  updatedAt: message.updatedAt,
 });
 
 /**
@@ -259,17 +292,62 @@ export const deletePost = async (postId: string): Promise<void> => {
   );
 };
 
-export default {
-  registerUser,
-  loginUser,
-  logoutUser,
-  getProfile,
-  updateProfile,
-  createPost,
-  getAllPosts,
-  getPostsByUser,
-  getPostsByStatus,
-  getPost,
-  updatePost,
-  deletePost,
+export const createOrGetConversation = async (
+  postId: string,
+  otherUserId: string,
+): Promise<ChatConversation> => {
+  const data = await apiCall(
+    "/chats/conversations",
+    {
+      method: "POST",
+      body: JSON.stringify({ postId, otherUserId }),
+    },
+    true,
+  );
+
+  return mapChatConversation(data.conversation);
+};
+
+export const getConversations = async (): Promise<ChatConversation[]> => {
+  const data = await apiCall(
+    "/chats/conversations",
+    { method: "GET" },
+    true,
+  );
+
+  return (data.conversations || []).map(mapChatConversation);
+};
+
+export const getConversationMessages = async (
+  conversationId: string,
+): Promise<{ conversation: ChatConversation; messages: ChatMessage[] }> => {
+  const data = await apiCall(
+    `/chats/conversations/${conversationId}/messages`,
+    { method: "GET" },
+    true,
+  );
+
+  return {
+    conversation: mapChatConversation(data.conversation),
+    messages: (data.messages || []).map(mapChatMessage),
+  };
+};
+
+export const sendMessage = async (
+  conversationId: string,
+  text: string,
+): Promise<{ message: ChatMessage; conversation: ChatConversation }> => {
+  const data = await apiCall(
+    `/chats/conversations/${conversationId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    },
+    true,
+  );
+
+  return {
+    message: mapChatMessage(data.message),
+    conversation: mapChatConversation(data.conversation),
+  };
 };

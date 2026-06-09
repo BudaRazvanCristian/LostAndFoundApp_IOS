@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, Linking, Alert } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, Alert } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -19,10 +19,38 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { refreshItems } = useItems();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isContacting, setIsContacting] = useState(false);
 
   const isOwner = useMemo(() => {
     return Boolean(user?.id && item.userId && user.id === item.userId);
   }, [item.userId, user?.id]);
+
+  const handleEdit = () => {
+    navigation.navigate("EditPost", { item });
+  };
+
+  const handleContactOwner = async () => {
+    if (!item.userId) {
+      Alert.alert("Chat unavailable", "This post does not have a valid owner.");
+      return;
+    }
+
+    try {
+      setIsContacting(true);
+      const conversation = await apiService.createOrGetConversation(item.id, item.userId);
+
+      navigation.navigate("ChatThread", {
+        conversationId: conversation.id,
+        otherUserName: conversation.otherUser?.displayName || item.ownerName,
+        postTitle: item.title,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to open chat";
+      Alert.alert("Chat error", message);
+    } finally {
+      setIsContacting(false);
+    }
+  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -107,41 +135,32 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
             </View>
           </View>
 
-           <AppButton
-             title={item.status === "Lost" ? "Contact owner" : "Send message"}
-             onPress={() => {
-               if (!item.phoneNumber) {
-                 Alert.alert("No phone number", "This post does not have a phone number to contact.");
-                 return;
-               }
-
-               // Remove spaces from phone number for tel: URI scheme
-               const cleanPhoneNumber = item.phoneNumber.replace(/\s/g, "");
-               const url = `tel:${cleanPhoneNumber}`;
-               
-               console.log("Attempting to call:", url);
-               
-               // Try to open the tel: URL
-               // Note: On iOS Simulator, tel: scheme doesn't work
-               Linking.openURL(url).catch((error) => {
-                 console.log("Error opening URL:", error);
-                 Alert.alert(
-                   "Unable to open dialer",
-                   "Your device cannot make phone calls. Try again on a physical device."
-                 );
-               });
-             }}
-             style={styles.primaryButton}
-           />
+          {!isOwner && (
+            <AppButton
+              title={isContacting ? "Opening chat..." : "Contact owner"}
+              onPress={handleContactOwner}
+              disabled={isContacting}
+              style={styles.primaryButton}
+            />
+          )}
 
           {isOwner && (
-            <AppButton
-              title={isDeleting ? "Deleting..." : "Delete post"}
-              onPress={handleDelete}
-              variant="danger"
-              disabled={isDeleting}
-              style={styles.deleteButton}
-            />
+            <>
+              <AppButton
+                title="Edit post"
+                onPress={handleEdit}
+                variant="secondary"
+                disabled={isDeleting}
+                style={styles.editButton}
+              />
+              <AppButton
+                title={isDeleting ? "Deleting..." : "Delete post"}
+                onPress={handleDelete}
+                variant="danger"
+                disabled={isDeleting}
+                style={styles.deleteButton}
+              />
+            </>
           )}
         </View>
       </ScrollView>
@@ -301,6 +320,9 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     marginTop: spacing.xs,
+  },
+  editButton: {
+    marginTop: spacing.sm,
   },
   deleteButton: {
     marginTop: spacing.sm,
