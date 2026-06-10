@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, Alert } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, Alert, Linking, Platform } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import AppButton from "../../components/AppButton";
@@ -90,6 +90,28 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
     );
   };
 
+  const openExternalMap = async () => {
+    if (typeof item.latitude !== "number" || typeof item.longitude !== "number") {
+      return;
+    }
+
+    const lat = item.latitude;
+    const lng = item.longitude;
+    const label = encodeURIComponent(item.location || item.title || "Lost and Found");
+
+    const mapUrl =
+      Platform.OS === "ios"
+        ? `http://maps.apple.com/?ll=${lat},${lng}&q=${label}`
+        : `geo:${lat},${lng}?q=${lat},${lng}(${label})`;
+
+    try {
+      await Linking.openURL(mapUrl);
+    } catch (error) {
+      console.error("Failed to open external maps app:", error);
+      Alert.alert("Map unavailable", "Unable to open maps on this device.");
+    }
+  };
+
   return (
     <View style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
@@ -147,6 +169,7 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
                       latitudeDelta: 0.02,
                       longitudeDelta: 0.02,
                     }}
+                    onPress={openExternalMap}
                     scrollEnabled={false}
                     zoomEnabled={false}
                     pitchEnabled={false}
@@ -171,6 +194,10 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
               <Text style={styles.coordinatesText}>
                 Lat: {item.latitude.toFixed(6)} | Lng: {item.longitude.toFixed(6)}
               </Text>
+              <Text style={styles.mapHintText}>Tap map or button below to open in Maps.</Text>
+              <Pressable onPress={openExternalMap} style={styles.openMapButton}>
+                <Text style={styles.openMapButtonText}>Open in Maps</Text>
+              </Pressable>
             </>
           )}
 
@@ -357,6 +384,30 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     textAlign: "center",
+  },
+  coordinatesText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
+  },
+  mapHintText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
+  },
+  openMapButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radii.full,
+    backgroundColor: colors.primarySoft,
+    marginBottom: spacing.lg,
+  },
+  openMapButtonText: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   ownerCard: {
     flexDirection: "row",
