@@ -25,6 +25,26 @@ import { useAuth } from "../../context/AuthContext";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { ItemStatus } from "../../types/item";
 
+// Load react-native-maps defensively to avoid startup crash if native setup is incomplete.
+let mapsLib: any;
+try {
+  mapsLib = require("react-native-maps");
+} catch {
+  mapsLib = null;
+}
+
+const MapView = mapsLib?.default;
+const Marker = mapsLib?.Marker;
+
+type MapPressEvent = {
+  nativeEvent: {
+    coordinate: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+};
+
 const statusOptions: ItemStatus[] = ["Lost", "Found"];
 
 const AddPostScreen: React.FC = () => {
@@ -36,6 +56,8 @@ const AddPostScreen: React.FC = () => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
   const [ownerName, setOwnerName] = useState(user?.displayName || "");
@@ -46,9 +68,29 @@ const AddPostScreen: React.FC = () => {
   const canSubmit = useMemo(
     () =>
       Boolean(
-        title.trim() && category.trim() && location.trim() && date.trim() && description.trim() && ownerName.trim() && phoneNumber.trim() && imageUri,
+        title.trim() &&
+          category.trim() &&
+          location.trim() &&
+          latitude !== null &&
+          longitude !== null &&
+          date.trim() &&
+          description.trim() &&
+          ownerName.trim() &&
+          phoneNumber.trim() &&
+          imageUri,
       ),
-    [category, date, description, imageUri, location, ownerName, phoneNumber, title],
+    [
+      category,
+      date,
+      description,
+      imageUri,
+      latitude,
+      location,
+      longitude,
+      ownerName,
+      phoneNumber,
+      title,
+    ],
   );
 
   const requestCameraPermission = async () => {
@@ -104,14 +146,20 @@ const AddPostScreen: React.FC = () => {
     }
   };
 
+  const handleMapPress = (event: MapPressEvent) => {
+    const { latitude: selectedLatitude, longitude: selectedLongitude } = event.nativeEvent.coordinate;
+    setLatitude(selectedLatitude);
+    setLongitude(selectedLongitude);
+  };
+
   const submitPost = async () => {
     if (!isAuthenticated) {
       Alert.alert("Not authenticated", "You must log in to create a post.");
       return;
     }
 
-    if (!canSubmit || !imageUri) {
-      Alert.alert("Complete the form", "Please add an image and fill in all details.");
+    if (!canSubmit || !imageUri || latitude === null || longitude === null) {
+      Alert.alert("Complete the form", "Please add image, details and select location on map.");
       return;
     }
 
@@ -124,6 +172,8 @@ const AddPostScreen: React.FC = () => {
         status,
         category: category.trim(),
         location: location.trim(),
+        latitude,
+        longitude,
         date: date.trim(),
         description: description.trim(),
         ownerName: ownerName.trim(),
@@ -138,6 +188,8 @@ const AddPostScreen: React.FC = () => {
       setTitle("");
       setCategory("");
       setLocation("");
+      setLatitude(null);
+      setLongitude(null);
       setDate("");
       setDescription("");
       setOwnerName(user?.displayName || "");
@@ -224,6 +276,40 @@ const AddPostScreen: React.FC = () => {
             <View style={styles.field}>
               <Text style={styles.label}>Location</Text>
               <TextInput style={styles.input} placeholder="Where was it lost or found?" placeholderTextColor={colors.textSubtle} value={location} onChangeText={setLocation} />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Select on map</Text>
+              <Text style={styles.sectionText}>Tap on map to pin exact location.</Text>
+              {MapView ? (
+                <View style={styles.mapContainer}>
+                  <MapView
+                    style={styles.map}
+                    initialRegion={{
+                      latitude: latitude ?? 44.4268,
+                      longitude: longitude ?? 26.1025,
+                      latitudeDelta: 0.08,
+                      longitudeDelta: 0.08,
+                    }}
+                    onPress={handleMapPress}
+                  >
+                    {latitude !== null && longitude !== null && Marker ? (
+                      <Marker coordinate={{ latitude, longitude }} title="Selected location" />
+                    ) : null}
+                  </MapView>
+                </View>
+              ) : (
+                <View style={styles.mapUnavailableWrap}>
+                  <Text style={styles.mapUnavailableText}>
+                    Map module not ready. Rebuild app after native install.
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.coordinatesText}>
+                {latitude !== null && longitude !== null
+                  ? `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`
+                  : "No location selected yet"}
+              </Text>
             </View>
 
             <View style={styles.field}>
@@ -437,6 +523,33 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 120,
     paddingTop: 14,
+  },
+  mapContainer: {
+    marginTop: spacing.sm,
+    borderRadius: radii.lg,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  map: {
+    width: "100%",
+    height: 200,
+  },
+  mapUnavailableWrap: {
+    marginTop: spacing.sm,
+    minHeight: 100,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+  },
+  mapUnavailableText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: "center",
   },
   switchRow: {
     flexDirection: "row",

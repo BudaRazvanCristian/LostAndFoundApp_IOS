@@ -133,6 +133,8 @@ const EditPostScreen: React.FC<EditPostScreenProps> = ({ navigation, route }) =>
         status,
         category: category.trim(),
         location: location.trim(),
+        latitude: item.latitude,
+        longitude: item.longitude,
         date: date.trim(),
         description: description.trim(),
         ownerName: ownerName.trim(),
@@ -415,4 +417,3 @@ const styles = StyleSheet.create({
 });
 
 export default EditPostScreen;
-

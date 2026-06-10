@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, Alert } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-
 import AppButton from "../../components/AppButton";
 import InfoCard from "../../components/InfoCard";
 import { colors } from "../../constants/colors";
@@ -11,6 +10,17 @@ import { MainStackParamList } from "../../navigation/MainNavigator";
 import { useAuth } from "../../context/AuthContext";
 import { useItems } from "../../context/ItemsContext";
 import * as apiService from "../../services/apiService";
+
+// Load react-native-maps defensively to avoid startup crash if native setup is incomplete.
+let mapsLib: any;
+try {
+  mapsLib = require("react-native-maps");
+} catch {
+  mapsLib = null;
+}
+
+const MapView = mapsLib?.default;
+const Marker = mapsLib?.Marker;
 
 type DetailsScreenProps = NativeStackScreenProps<MainStackParamList, "Details">;
 
@@ -123,6 +133,46 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
 
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.description}>{item.description}</Text>
+
+          {typeof item.latitude === "number" && typeof item.longitude === "number" && (
+            <>
+              <Text style={styles.sectionTitle}>Map location</Text>
+              {MapView ? (
+                <View style={styles.mapWrap}>
+                  <MapView
+                    style={styles.map}
+                    initialRegion={{
+                      latitude: item.latitude,
+                      longitude: item.longitude,
+                      latitudeDelta: 0.02,
+                      longitudeDelta: 0.02,
+                    }}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                    pitchEnabled={false}
+                    rotateEnabled={false}
+                  >
+                    {Marker ? (
+                      <Marker
+                        coordinate={{ latitude: item.latitude, longitude: item.longitude }}
+                        title={item.title}
+                        description={item.location}
+                      />
+                    ) : null}
+                  </MapView>
+                </View>
+              ) : (
+                <View style={styles.mapUnavailableWrap}>
+                  <Text style={styles.mapUnavailableText}>
+                    Map module not ready. Rebuild app after native install.
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.coordinatesText}>
+                Lat: {item.latitude.toFixed(6)} | Lng: {item.longitude.toFixed(6)}
+              </Text>
+            </>
+          )}
 
           <Text style={styles.sectionTitle}>Reported by</Text>
           <View style={styles.ownerCard}>
@@ -280,6 +330,33 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.textMuted,
     marginBottom: spacing.lg,
+  },
+  mapWrap: {
+    borderRadius: radii.lg,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    marginBottom: spacing.sm,
+  },
+  map: {
+    width: "100%",
+    height: 180,
+  },
+  mapUnavailableWrap: {
+    minHeight: 100,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  mapUnavailableText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: "center",
   },
   ownerCard: {
     flexDirection: "row",

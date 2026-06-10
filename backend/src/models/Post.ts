@@ -8,6 +8,8 @@ export interface IPost extends Document {
   description: string;
   category: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   status: ItemStatus;
   date: string;
   ownerName: string;
@@ -43,6 +45,14 @@ const PostSchema = new Schema<IPost>(
       type: String,
       required: [true, "Location is required"],
     },
+    latitude: {
+      type: Number,
+      default: null,
+    },
+    longitude: {
+      type: Number,
+      default: null,
+    },
     status: {
       type: String,
       required: [true, "Status is required"],
@@ -76,4 +86,3 @@ PostSchema.index({ status: 1 });
 PostSchema.index({ createdAt: -1 });
 
 export default mongoose.model<IPost>("Post", PostSchema);
-

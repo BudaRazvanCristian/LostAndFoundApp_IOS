@@ -12,6 +12,8 @@ router.post("/", verifyToken, async (req: Request, res: Response) => {
       description,
       category,
       location,
+      latitude,
+      longitude,
       status,
       date,
       ownerName,
@@ -33,6 +35,8 @@ router.post("/", verifyToken, async (req: Request, res: Response) => {
       description,
       category,
       location,
+      latitude,
+      longitude,
       status,
       date,
       ownerName,
@@ -154,6 +158,8 @@ router.put("/posts/:id", verifyToken, async (req: Request, res: Response) => {
       description,
       category,
       location,
+      latitude,
+      longitude,
       status,
       date,
       ownerName,
@@ -180,6 +186,8 @@ router.put("/posts/:id", verifyToken, async (req: Request, res: Response) => {
         description: description || post.description,
         category: category || post.category,
         location: location || post.location,
+        latitude: latitude ?? post.latitude,
+        longitude: longitude ?? post.longitude,
         status: status || post.status,
         date: date || post.date,
         ownerName: ownerName || post.ownerName,
@@ -229,4 +237,3 @@ router.delete("/posts/:id", verifyToken, async (req: Request, res: Response) => 
 });
 
 export default router;
-

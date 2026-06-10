@@ -9,6 +9,8 @@ export interface Item {
   status: ItemStatus;
   category: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   date: string;
   description: string;
   ownerName: string;
