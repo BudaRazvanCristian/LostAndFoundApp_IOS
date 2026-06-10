@@ -36,7 +36,6 @@ const LoginScreen: React.FC = () => {
     setIsLoading(true);
     try {
       await login(email.trim(), password);
-      navigation.navigate("Main");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Login failed";
       Alert.alert("Login Failed", message);

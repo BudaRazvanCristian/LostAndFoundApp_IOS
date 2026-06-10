@@ -42,7 +42,6 @@ const RegisterScreen: React.FC = () => {
     setIsLoading(true);
     try {
       await register(email.trim(), password, displayName.trim());
-      navigation.navigate("Main");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Registration failed";
       Alert.alert("Registration Failed", message);

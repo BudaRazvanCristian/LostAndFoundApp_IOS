@@ -1,9 +1,36 @@
-import React from "react";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Alert, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
+import AppButton from "../../components/AppButton";
 import { colors } from "../../constants/colors";
+import { spacing } from "../../constants/spacing";
+import { useAuth } from "../../context/AuthContext";
 
 const ProfileScreen: React.FC = () => {
+  const { user, logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = () => {
+    Alert.alert("Log out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setIsLoggingOut(true);
+            await logout();
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to log out";
+            Alert.alert("Logout failed", message);
+          } finally {
+            setIsLoggingOut(false);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundTop} />
@@ -12,23 +39,40 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.header}>
           <Text style={styles.badge}>Account</Text>
           <Text style={styles.title}>Profile</Text>
-          <Text style={styles.subtitle}>
-            Manage your personal details, posts, and preferences.
-          </Text>
+          <Text style={styles.subtitle}>Review your account details and manage your session.</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.sectionText}>
-            View profile information and your posting history here.
-          </Text>
+          <Text style={styles.sectionTitle}>Your details</Text>
+
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>Name</Text>
+            <Text style={styles.fieldValue}>{user?.displayName || "-"}</Text>
+          </View>
+
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>Email</Text>
+            <Text style={styles.fieldValue}>{user?.email || "-"}</Text>
+          </View>
+
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>Phone</Text>
+            <Text style={styles.fieldValue}>{user?.phone || "Not set"}</Text>
+          </View>
+
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>User ID</Text>
+            <Text style={styles.fieldValueSmall}>{user?.id || "-"}</Text>
+          </View>
 
           <View style={styles.divider} />
 
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <Text style={styles.sectionText}>
-            Update notification preferences and account security.
-          </Text>
+          <AppButton
+            title={isLoggingOut ? "Logging out..." : "Log out"}
+            onPress={handleLogout}
+            variant="danger"
+            disabled={isLoggingOut}
+          />
         </View>
       </View>
     </SafeAreaView>
@@ -102,15 +146,30 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: spacing.md,
   },
-  sectionText: {
-    fontSize: 14,
-    color: colors.mutedText,
-    lineHeight: 20,
+  fieldRow: {
+    marginBottom: spacing.sm,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    fontWeight: "700",
+  },
+  fieldValue: {
+    fontSize: 16,
+    color: colors.text,
+    fontWeight: "600",
+  },
+  fieldValueSmall: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
   divider: {
     height: 1,
@@ -120,4 +179,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileScreen;
-
