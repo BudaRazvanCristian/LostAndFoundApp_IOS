@@ -1,10 +1,12 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +16,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import ItemCard from "../../components/ItemCard";
 import { colors } from "../../constants/colors";
 import { useItems } from "../../context/ItemsContext";
+import * as apiService from "../../services/apiService";
 import { Item } from "../../types/item";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 
@@ -21,9 +24,68 @@ const FoundItemsScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const route = useRoute();
   const { foundItems, isLoading, error, refreshItems } = useItems();
+  const [titleQuery, setTitleQuery] = useState("");
+  const [dateQuery, setDateQuery] = useState("");
+  const [categoryQuery, setCategoryQuery] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [searchItems, setSearchItems] = useState<Item[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Determine layout based on route params or default to horizontal
   const layout = (route.params as any)?.layout || "horizontal";
+
+  const hasActiveFilters = useMemo(
+    () =>
+      Boolean(
+        titleQuery.trim() ||
+          dateQuery.trim() ||
+          categoryQuery.trim() ||
+          locationQuery.trim(),
+      ),
+    [categoryQuery, dateQuery, locationQuery, titleQuery],
+  );
+
+  useEffect(() => {
+    if (!hasActiveFilters) {
+      setSearchItems([]);
+      setIsSearching(false);
+      return;
+    }
+
+    let isActive = true;
+    const timeoutId = setTimeout(async () => {
+      try {
+        setIsSearching(true);
+        const results = await apiService.getAllPosts({
+          status: "Found",
+          title: titleQuery.trim() || undefined,
+          date: dateQuery.trim() || undefined,
+          category: categoryQuery.trim() || undefined,
+          location: locationQuery.trim() || undefined,
+        });
+
+        if (isActive) {
+          setSearchItems(results);
+        }
+      } catch (searchError) {
+        console.error("Found search error:", searchError);
+        if (isActive) {
+          setSearchItems([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsSearching(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timeoutId);
+    };
+  }, [categoryQuery, dateQuery, hasActiveFilters, locationQuery, titleQuery]);
+
+  const filteredFoundItems = hasActiveFilters ? searchItems : foundItems;
 
   const openDetails = (item: Item) => {
     navigation.navigate("Details", { item });
@@ -34,6 +96,13 @@ const FoundItemsScreen: React.FC = () => {
       refreshItems().catch(() => undefined);
     }, [refreshItems]),
   );
+
+  const clearFilters = () => {
+    setTitleQuery("");
+    setDateQuery("");
+    setCategoryQuery("");
+    setLocationQuery("");
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -51,21 +120,58 @@ const FoundItemsScreen: React.FC = () => {
         )}
 
         <View style={layout === "vertical" ? styles.card : styles.cardHorizontal}>
-          {layout === "horizontal" && (
-            <>
-              <Text style={styles.sectionTitle}>Latest Finds</Text>
-              <Text style={styles.sectionText}>
-                Open any community found item and check the full details.
-              </Text>
+          <Text style={styles.sectionTitle}>Search Found Items</Text>
+          <Text style={styles.sectionText}>
+            Search by title, date, category and location for found announcements.
+          </Text>
 
-              <View style={styles.divider} />
-            </>
-          )}
+          <View style={styles.searchWrap}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by title..."
+              placeholderTextColor={colors.textSubtle}
+              value={titleQuery}
+              onChangeText={setTitleQuery}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by date (e.g. May 24, 2026)"
+              placeholderTextColor={colors.textSubtle}
+              value={dateQuery}
+              onChangeText={setDateQuery}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by category..."
+              placeholderTextColor={colors.textSubtle}
+              value={categoryQuery}
+              onChangeText={setCategoryQuery}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by location..."
+              placeholderTextColor={colors.textSubtle}
+              value={locationQuery}
+              onChangeText={setLocationQuery}
+            />
+            {(titleQuery.length > 0 ||
+              dateQuery.length > 0 ||
+              categoryQuery.length > 0 ||
+              locationQuery.length > 0) && (
+              <TouchableOpacity onPress={clearFilters} activeOpacity={0.7}>
+                <Text style={styles.clearFiltersText}>Clear filters</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-          {isLoading ? (
+          <View style={styles.divider} />
+
+          {isLoading || isSearching ? (
             <View style={styles.feedbackWrap}>
               <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.feedbackText}>Loading found items...</Text>
+              <Text style={styles.feedbackText}>
+                {isSearching ? "Searching found items..." : "Loading found items..."}
+              </Text>
             </View>
           ) : error ? (
             <View style={styles.feedbackWrap}>
@@ -73,7 +179,7 @@ const FoundItemsScreen: React.FC = () => {
             </View>
           ) : (
             <FlatList
-              data={foundItems}
+              data={filteredFoundItems}
               keyExtractor={(item) => item.id}
               horizontal={layout === "horizontal"}
               showsHorizontalScrollIndicator={false}
@@ -90,7 +196,11 @@ const FoundItemsScreen: React.FC = () => {
               }
               ListEmptyComponent={
                 <View style={styles.feedbackWrap}>
-                  <Text style={styles.feedbackText}>No found items yet.</Text>
+                  <Text style={styles.feedbackText}>
+                    {titleQuery || dateQuery || categoryQuery || locationQuery
+                      ? "No found items match your search."
+                      : "No found items yet."}
+                  </Text>
                 </View>
               }
               renderItem={({ item }) => (
@@ -200,6 +310,26 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: 16,
+  },
+  searchWrap: {
+    marginTop: 10,
+    gap: 10,
+  },
+  searchInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    backgroundColor: colors.background,
+    color: colors.text,
+    fontSize: 14,
+  },
+  clearFiltersText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: "600",
+    alignSelf: "flex-end",
   },
   listContent: {
     paddingBottom: 4,

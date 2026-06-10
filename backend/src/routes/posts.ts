@@ -59,7 +59,7 @@ router.post("/", verifyToken, async (req: Request, res: Response) => {
 // GET ALL POSTS
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const { status, category } = req.query;
+    const { status, category, title, date, location } = req.query;
 
     let query: any = {};
 
@@ -68,7 +68,19 @@ router.get("/", async (req: Request, res: Response) => {
     }
 
     if (category) {
-      query.category = category;
+      query.category = { $regex: String(category), $options: "i" };
+    }
+
+    if (title) {
+      query.title = { $regex: String(title), $options: "i" };
+    }
+
+    if (date) {
+      query.date = { $regex: String(date), $options: "i" };
+    }
+
+    if (location) {
+      query.location = { $regex: String(location), $options: "i" };
     }
 
     const posts = await Post.find(query)

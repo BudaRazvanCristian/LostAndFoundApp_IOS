@@ -215,12 +215,23 @@ export const createPost = async (post: Omit<Item, "id">): Promise<string> => {
   return data.post.id;
 };
 
-export const getAllPosts = async (status?: string, category?: string): Promise<Item[]> => {
+export interface PostFilters {
+  status?: string;
+  category?: string;
+  title?: string;
+  date?: string;
+  location?: string;
+}
+
+export const getAllPosts = async (filters: PostFilters = {}): Promise<Item[]> => {
   let endpoint = "/posts";
   const params = new URLSearchParams();
 
-  if (status) params.append("status", status);
-  if (category) params.append("category", category);
+  if (filters.status) params.append("status", filters.status);
+  if (filters.category) params.append("category", filters.category);
+  if (filters.title) params.append("title", filters.title);
+  if (filters.date) params.append("date", filters.date);
+  if (filters.location) params.append("location", filters.location);
 
   if (params.toString()) {
     endpoint += `?${params.toString()}`;
