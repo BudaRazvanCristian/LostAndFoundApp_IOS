@@ -7,7 +7,6 @@ import {
   ScrollView,
   Image,
   Alert,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
@@ -16,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AppButton from "../../components/AppButton";
 import AppTextInput from "../../components/AppTextInput";
 import { colors } from "../../constants/colors";
-import { radii, shadows, spacing } from "../../constants/spacing";
+import { radii, spacing } from "../../constants/spacing";
 import { useItems } from "../../context/ItemsContext";
 import { useAuth } from "../../context/AuthContext";
 
@@ -382,4 +381,3 @@ const styles = StyleSheet.create({
 });
 
 export default AddPostScreen;
-

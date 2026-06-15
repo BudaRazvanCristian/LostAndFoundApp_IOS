@@ -26,6 +26,29 @@ jest.mock("expo-image-picker", () => ({
   launchCameraAsync: jest.fn(async () => ({ canceled: true, assets: [] })),
 }));
 
+jest.mock("expo-device", () => ({
+  __esModule: true,
+  isDevice: true,
+}));
+
+jest.mock("expo-constants", () => ({
+  __esModule: true,
+  default: {
+    expoConfig: { extra: { eas: { projectId: "test-project-id" } } },
+    easConfig: { projectId: "test-project-id" },
+  },
+}));
+
+jest.mock("expo-notifications", () => ({
+  __esModule: true,
+  AndroidImportance: { MAX: 5 },
+  setNotificationHandler: jest.fn(),
+  getPermissionsAsync: jest.fn(async () => ({ status: "granted" })),
+  requestPermissionsAsync: jest.fn(async () => ({ status: "granted" })),
+  setNotificationChannelAsync: jest.fn(async () => undefined),
+  getExpoPushTokenAsync: jest.fn(async () => ({ data: "ExponentPushToken[test-token]" })),
+}));
+
 jest.mock("react-native-screens", () => ({
   enableScreens: jest.fn(),
 }));

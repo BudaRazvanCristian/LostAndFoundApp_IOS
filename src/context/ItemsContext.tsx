@@ -27,8 +27,10 @@ export const ItemsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const loadItems = useCallback(async () => {
     try {
+
       setIsLoading(true);
       setError(null);
+
       const posts = await apiService.getAllPosts();
       const transformed: Item[] = posts.map((post) => ({
         ...post,

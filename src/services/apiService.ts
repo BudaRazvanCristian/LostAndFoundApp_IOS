@@ -5,9 +5,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Item } from "../types/item";
 import { ChatConversation, ChatMessage } from "../types/chat";
-import { API_URL } from "../config/api";
+import { API_URL, getDevApiUrlCandidates } from "../config/api";
 
-const API_BASE_URL = API_URL;
+const API_BASE_URLS = __DEV__ ? getDevApiUrlCandidates() : [API_URL];
 
 // Helper to get JWT token from storage
 const getAuthToken = async (): Promise<string | null> => {
@@ -38,22 +38,43 @@ const apiCall = async (
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let lastNetworkError: unknown = null;
 
-  const data: unknown = await response.json();
+  for (const baseUrl of API_BASE_URLS) {
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        ...options,
+        headers,
+      });
 
-  if (!response.ok) {
-    const errorMessage =
-      typeof data === "object" && data !== null && "error" in data
-        ? String((data as { error?: unknown }).error || "API call failed")
-        : "API call failed";
-    throw new Error(errorMessage);
+      const raw = await response.text();
+      const data: unknown = raw ? JSON.parse(raw) : {};
+
+      if (!response.ok) {
+        const errorMessage =
+          typeof data === "object" && data !== null && "error" in data
+            ? String((data as { error?: unknown }).error || "API call failed")
+            : "API call failed";
+        throw new Error(errorMessage);
+      }
+
+      return data;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isNetworkFailure = /network request failed/i.test(message) || /failed to fetch/i.test(message);
+
+      if (!isNetworkFailure) {
+        throw error;
+      }
+
+      lastNetworkError = error;
+      console.warn(`Network failed for ${baseUrl}${endpoint}, trying next candidate...`);
+    }
   }
 
-  return data;
+  const tried = API_BASE_URLS.join(", ");
+  const details = lastNetworkError instanceof Error ? lastNetworkError.message : "unknown network error";
+  throw new Error(`Network request failed. Tried: ${tried}. Last error: ${details}`);
 };
 
 const extractUserId = (userField: any): string | undefined => {
@@ -72,7 +93,7 @@ const mapPostToItem = (post: any): Item => ({
 });
 
 const mapChatUser = (user: any) => ({
-  id: extractUserId(user),
+   id: extractUserId(user) || "",
   displayName: user?.displayName,
   profileImage: user?.profileImage ?? null,
   email: user?.email,
@@ -196,6 +217,27 @@ export const updateProfile = async (
   );
 
   return data.user;
+};
+
+export const updatePushToken = async (expoPushToken: string | null): Promise<void> => {
+  await apiCall(
+    "/auth/push-token",
+    {
+      method: "PUT",
+      body: JSON.stringify({ expoPushToken }),
+    },
+    true,
+  );
+};
+
+export const sendPushTest = async (): Promise<void> => {
+  await apiCall(
+    "/auth/push-test",
+    {
+      method: "POST",
+    },
+    true,
+  );
 };
 
 /**

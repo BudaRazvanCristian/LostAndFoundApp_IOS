@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import Post from "../models/Post";
+import User from "../models/User";
 import { verifyToken } from "../middleware/auth";
+import { sendPushToMany } from "../services/notifications";
 
 const router = Router();
 
@@ -45,6 +47,25 @@ router.post("/", verifyToken, async (req: Request, res: Response) => {
     });
 
     await post.save();
+
+    // Notify other users that a new post was published.
+    const otherUsers = await User.find({
+      _id: { $ne: req.userId },
+      expoPushToken: { $ne: null },
+    }).select("expoPushToken");
+
+    await sendPushToMany(
+      otherUsers
+        .map((user) => user.expoPushToken)
+        .filter((token): token is string => Boolean(token)),
+      `New ${status} item reported`,
+      `${title} was posted in ${location}`,
+      {
+        type: "post-created",
+        postId: post._id.toString(),
+        status,
+      },
+    );
 
     return res.status(201).json({
       message: "Post created successfully",

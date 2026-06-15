@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as apiService from "../services/apiService";
+import { registerForPushNotificationsAsync } from "../services/notificationsService";
 
 export interface AuthUser {
   id: string;
@@ -44,6 +45,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     restoreSession();
   }, []);
 
+  useEffect(() => {
+    const syncPushToken = async () => {
+      if (!user?.token) return;
+
+      try {
+        const expoPushToken = await registerForPushNotificationsAsync();
+        await apiService.updatePushToken(expoPushToken);
+      } catch (error) {
+        console.error("Failed to sync push token:", error);
+      }
+    };
+
+    syncPushToken();
+  }, [user?.token]);
+
   const login = async (email: string, password: string): Promise<void> => {
     const { user: apiUser, token } = await apiService.loginUser(email, password);
     const authUser: AuthUser = {
@@ -76,6 +92,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async (): Promise<void> => {
+    try {
+      await apiService.updatePushToken(null);
+    } catch {
+      // Best effort only; continue logout even if token removal fails.
+    }
     await apiService.logoutUser();
     await AsyncStorage.removeItem("currentUser");
     setUser(null);

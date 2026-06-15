@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
-import User, { IUser } from "../models/User";
-import { generateToken, verifyToken, AuthRequest } from '../middleware/auth';
+import User from "../models/User";
+import { generateToken, verifyToken } from "../middleware/auth";
+import { sendPushNotification } from "../services/notifications";
 
 const router = Router();
 
@@ -158,6 +159,51 @@ router.put("/profile", verifyToken, async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Profile update error:", error);
     return res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
+// UPDATE PUSH TOKEN - Save/remove Expo push token for current user
+router.put("/push-token", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const { expoPushToken } = req.body as { expoPushToken?: string | null };
+
+    await User.findByIdAndUpdate(req.userId, {
+      expoPushToken: expoPushToken || null,
+    });
+
+    return res.status(200).json({ message: "Push token updated" });
+  } catch (error) {
+    console.error("Push token update error:", error);
+    return res.status(500).json({ error: "Failed to update push token" });
+  }
+});
+
+// TEST PUSH - Send a test notification to current user
+router.post("/push-test", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.userId).select("displayName expoPushToken");
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (!user.expoPushToken) {
+      return res.status(400).json({
+        error: "No Expo push token saved for this user",
+      });
+    }
+
+    await sendPushNotification(
+      user.expoPushToken,
+      "Push test",
+      `Hello ${user.displayName}, notifications are working!`,
+      { type: "push-test" },
+    );
+
+    return res.status(200).json({ message: "Push test sent" });
+  } catch (error) {
+    console.error("Push test error:", error);
+    return res.status(500).json({ error: "Failed to send push test" });
   }
 });
 

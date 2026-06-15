@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import { colors } from "../constants/colors";
-import { radii, shadows, spacing } from "../constants/spacing";
+import { radii, spacing } from "../constants/spacing";
 
 export interface AppTextInputProps extends TextInputProps {
   placeholder?: string;
@@ -123,4 +123,3 @@ const styles = StyleSheet.create({
 });
 
 export default AppTextInput;
-

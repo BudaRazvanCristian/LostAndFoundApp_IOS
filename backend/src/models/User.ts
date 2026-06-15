@@ -7,6 +7,7 @@ export interface IUser extends Document {
   displayName: string;
   phone?: string;
   profileImage?: string;
+  expoPushToken?: string | null;
   createdAt: Date;
   updatedAt: Date;
   comparePassword: (password: string) => Promise<boolean>;
@@ -18,7 +19,7 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: [true, "Email is required"],
       unique: true,
-      match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, "Please provide a valid email"],
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Please provide a valid email"],
     },
     password: {
       type: String,
@@ -35,6 +36,10 @@ const UserSchema = new Schema<IUser>(
       default: null,
     },
     profileImage: {
+      type: String,
+      default: null,
+    },
+    expoPushToken: {
       type: String,
       default: null,
     },
@@ -66,4 +71,3 @@ UserSchema.methods.comparePassword = async function (password: string): Promise<
 };
 
 export default mongoose.model<IUser>("User", UserSchema);
-

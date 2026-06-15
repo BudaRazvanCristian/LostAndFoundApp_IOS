@@ -5,6 +5,8 @@ import { verifyToken } from "../middleware/auth";
 import { Conversation } from "../models/Conversation";
 import Message from "../models/Message";
 import Post from "../models/Post";
+import User from "../models/User";
+import { sendPushNotification } from "../services/notifications";
 
 const router = Router();
 
@@ -188,6 +190,25 @@ router.post("/conversations/:conversationId/messages", verifyToken, async (req: 
       senderId: req.userId,
       text: text.trim(),
     });
+
+    const recipientId = conversation.participants
+      .map((participant: any) => toStringId(participant))
+      .find((participantId: string) => participantId !== req.userId);
+
+    if (recipientId) {
+      const recipient = await User.findById(recipientId).select("expoPushToken");
+      if (recipient?.expoPushToken) {
+        await sendPushNotification(
+          recipient.expoPushToken,
+          "New message",
+          text.trim(),
+          {
+            type: "chat-message",
+            conversationId,
+          },
+        );
+      }
+    }
 
     conversation.lastMessage = text.trim();
     conversation.lastMessageAt = new Date();

@@ -1,14 +1,40 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 import AppButton from "../../components/AppButton";
 import { colors } from "../../constants/colors";
 import { spacing } from "../../constants/spacing";
 import { useAuth } from "../../context/AuthContext";
+import * as apiService from "../../services/apiService";
+import { registerForPushNotificationsAsync } from "../../services/notificationsService";
 
 const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isTestingPush, setIsTestingPush] = useState(false);
+
+  const withTimeout = async <T,>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> => {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        setTimeout(() => reject(new Error(timeoutMessage)), ms);
+      }),
+    ]);
+  };
+
+  useEffect(() => {
+    if (!isTestingPush) return;
+
+    const safetyReset = setTimeout(() => {
+      setIsTestingPush(false);
+      Alert.alert(
+        "Push test timeout",
+        "Request took too long. Check internet/backend and try again.",
+      );
+    }, 20000);
+
+    return () => clearTimeout(safetyReset);
+  }, [isTestingPush]);
 
   const handleLogout = () => {
     Alert.alert("Log out", "Are you sure you want to log out?", [
@@ -29,6 +55,42 @@ const ProfileScreen: React.FC = () => {
         },
       },
     ]);
+  };
+
+  const handlePushTest = async () => {
+    try {
+      setIsTestingPush(true);
+
+      const expoPushToken = await withTimeout(
+        registerForPushNotificationsAsync(),
+        10000,
+        "Could not obtain Expo push token in time",
+      );
+      if (!expoPushToken) {
+        Alert.alert(
+          "Push token missing",
+          "No push token available yet. Use a physical device, allow notifications, then try again.",
+        );
+        return;
+      }
+
+      await withTimeout(
+        apiService.updatePushToken(expoPushToken),
+        10000,
+        "Push token sync timed out",
+      );
+      await withTimeout(
+        apiService.sendPushTest(),
+        10000,
+        "Push test request timed out",
+      );
+      Alert.alert("Push test", "Test notification sent. Check device notifications.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to send push test";
+      Alert.alert("Push test failed", message);
+    } finally {
+      setIsTestingPush(false);
+    }
   };
 
   return (
@@ -66,6 +128,14 @@ const ProfileScreen: React.FC = () => {
           </View>
 
           <View style={styles.divider} />
+
+          <AppButton
+            title={isTestingPush ? "Sending test..." : "Send test notification"}
+            onPress={handlePushTest}
+            variant="secondary"
+            disabled={isTestingPush || isLoggingOut}
+            style={styles.testPushButton}
+          />
 
           <AppButton
             title={isLoggingOut ? "Logging out..." : "Log out"}
@@ -175,6 +245,9 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: 16,
+  },
+  testPushButton: {
+    marginBottom: spacing.sm,
   },
 });
 

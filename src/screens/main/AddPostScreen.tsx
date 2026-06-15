@@ -14,15 +14,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import AppButton from "../../components/AppButton";
 import { colors } from "../../constants/colors";
 import { radii, shadows, spacing } from "../../constants/spacing";
 import { useItems } from "../../context/ItemsContext";
 import { useAuth } from "../../context/AuthContext";
-import type { MainStackParamList } from "../../navigation/MainNavigator";
 import { ItemStatus } from "../../types/item";
 
 // Load react-native-maps defensively to avoid startup crash if native setup is incomplete.
@@ -47,8 +44,16 @@ type MapPressEvent = {
 
 const statusOptions: ItemStatus[] = ["Lost", "Found"];
 
+const buildUploadImageUri = (asset: ImagePicker.ImagePickerAsset): string => {
+  if (asset.base64) {
+    const mimeType = asset.mimeType || "image/jpeg";
+    return `data:${mimeType};base64,${asset.base64}`;
+  }
+
+  return asset.uri;
+};
+
 const AddPostScreen: React.FC = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { addItem } = useItems();
   const { user, isAuthenticated } = useAuth();
 
@@ -63,6 +68,7 @@ const AddPostScreen: React.FC = () => {
   const [ownerName, setOwnerName] = useState(user?.displayName || "");
   const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUploadUri, setImageUploadUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canSubmit = useMemo(
@@ -77,13 +83,15 @@ const AddPostScreen: React.FC = () => {
           description.trim() &&
           ownerName.trim() &&
           phoneNumber.trim() &&
-          imageUri,
+          imageUri &&
+          imageUploadUri,
       ),
     [
       category,
       date,
       description,
       imageUri,
+      imageUploadUri,
       latitude,
       location,
       longitude,
@@ -124,10 +132,13 @@ const AddPostScreen: React.FC = () => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.9,
+      base64: true,
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const selectedAsset = result.assets[0];
+      setImageUri(selectedAsset.uri);
+      setImageUploadUri(buildUploadImageUri(selectedAsset));
     }
   };
 
@@ -139,10 +150,13 @@ const AddPostScreen: React.FC = () => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.9,
+      base64: true,
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const selectedAsset = result.assets[0];
+      setImageUri(selectedAsset.uri);
+      setImageUploadUri(buildUploadImageUri(selectedAsset));
     }
   };
 
@@ -158,7 +172,7 @@ const AddPostScreen: React.FC = () => {
       return;
     }
 
-    if (!canSubmit || !imageUri || latitude === null || longitude === null) {
+    if (!canSubmit || !imageUri || !imageUploadUri || latitude === null || longitude === null) {
       Alert.alert("Complete the form", "Please add image, details and select location on map.");
       return;
     }
@@ -166,9 +180,8 @@ const AddPostScreen: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const postId = await addItem({
+      await addItem({
         title: title.trim(),
-        imageUri,
         status,
         category: category.trim(),
         location: location.trim(),
@@ -178,6 +191,7 @@ const AddPostScreen: React.FC = () => {
         description: description.trim(),
         ownerName: ownerName.trim(),
         phoneNumber: phoneNumber.trim(),
+        imageUri: imageUploadUri,
       });
 
       Alert.alert("Post created", "Your item was added successfully.", [
@@ -195,6 +209,7 @@ const AddPostScreen: React.FC = () => {
       setOwnerName(user?.displayName || "");
       setPhoneNumber(user?.phone || "");
       setImageUri(null);
+      setImageUploadUri(null);
       setStatus("Lost");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -551,6 +566,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
   },
+  coordinatesText: {
+    marginTop: spacing.xs,
+    color: colors.textMuted,
+    fontSize: 12,
+  },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -568,4 +588,3 @@ const styles = StyleSheet.create({
 });
 
 export default AddPostScreen;
-
