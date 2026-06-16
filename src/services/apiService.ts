@@ -404,3 +404,12 @@ export const sendMessage = async (
     conversation: mapChatConversation(data.conversation),
   };
 };
+
+export const deleteConversation = async (conversationId: string): Promise<void> => {
+  await apiCall(
+    `/chats/conversations/${conversationId}`,
+    { method: "DELETE" },
+    true,
+  );
+};
+

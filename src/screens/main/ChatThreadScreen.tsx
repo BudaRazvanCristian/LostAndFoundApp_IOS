@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -31,6 +32,7 @@ const ChatThreadScreen: React.FC<ChatThreadScreenProps> = ({ navigation, route }
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [remoteTitle, setRemoteTitle] = useState(postTitle || "Chat");
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -86,6 +88,34 @@ const ChatThreadScreen: React.FC<ChatThreadScreenProps> = ({ navigation, route }
 
   const headerTitle = useMemo(() => otherUserName || "Conversation", [otherUserName]);
 
+  const confirmDeleteConversation = () => {
+    if (isDeleting) return;
+
+    Alert.alert(
+      "Delete chat",
+      "This will remove the conversation from your inbox.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await apiService.deleteConversation(conversationId);
+              navigation.goBack();
+            } catch (error) {
+              console.error("Delete conversation failed:", error);
+              Alert.alert("Error", "Could not delete chat right now. Please try again.");
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundTop} />
@@ -103,6 +133,14 @@ const ChatThreadScreen: React.FC<ChatThreadScreenProps> = ({ navigation, route }
               <Text style={styles.title}>{headerTitle}</Text>
               <Text style={styles.subtitle}>{remoteTitle}</Text>
             </View>
+            <Pressable
+              style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
+              onPress={confirmDeleteConversation}
+              disabled={isDeleting}
+              hitSlop={8}
+            >
+              <Ionicons name="trash-outline" size={16} color={colors.danger} />
+            </Pressable>
           </View>
 
           <View style={styles.threadCard}>
@@ -205,6 +243,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...shadows.card,
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  deleteButtonDisabled: {
+    opacity: 0.6,
   },
   headerTextWrap: {
     flex: 1,

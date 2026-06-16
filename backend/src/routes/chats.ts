@@ -236,6 +236,29 @@ router.post("/conversations/:conversationId/messages", verifyToken, async (req: 
   }
 });
 
+router.delete("/conversations/:conversationId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const { conversationId } = req.params;
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    if (!isParticipant(conversation, req.userId as string)) {
+      return res.status(403).json({ error: "Not authorized to delete this conversation" });
+    }
+
+    await Message.deleteMany({ conversationId });
+    await Conversation.deleteOne({ _id: conversationId });
+
+    return res.status(200).json({ message: "Conversation deleted successfully" });
+  } catch (error) {
+    console.error("Conversation delete error:", error);
+    return res.status(500).json({ error: "Failed to delete conversation" });
+  }
+});
+
 export default router;
 
 
