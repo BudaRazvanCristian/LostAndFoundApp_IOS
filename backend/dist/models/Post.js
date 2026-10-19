@@ -88,6 +88,25 @@ const PostSchema = new mongoose_1.Schema({
         type: String,
         default: "",
     },
+    aiAnalysis: {
+        type: {
+            objectType: { type: String, required: false, default: null },
+            brand: { type: String, required: false, default: null },
+            primaryColor: { type: String, required: false, default: null },
+            secondaryColors: { type: [String], default: [] },
+            material: { type: String, required: false, default: null },
+            distinguishingFeatures: { type: [String], default: [] },
+            visibleText: { type: [String], default: [] },
+            shortDescription: { type: String, required: false, default: null },
+            suggestedTitle: { type: String, required: false, default: null },
+            suggestedCategory: { type: String, required: false, default: null },
+            confidence: { type: Number, required: false, default: 0 },
+            provider: { type: String, required: false, default: null },
+            model: { type: String, required: false, default: null },
+            analyzedAt: { type: String, required: false, default: null },
+        },
+        default: null,
+    },
 }, {
     timestamps: true,
 });

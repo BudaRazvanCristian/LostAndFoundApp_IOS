@@ -1,4 +1,5 @@
 import mongoose, { Document } from "mongoose";
+import type { ItemAiAnalysis } from "../types/itemAnalysis";
 export type ItemStatus = "Lost" | "Found";
 export interface IPost extends Document {
     userId: mongoose.Types.ObjectId;
@@ -13,6 +14,7 @@ export interface IPost extends Document {
     ownerName: string;
     phoneNumber: string;
     imageUri: string;
+    aiAnalysis?: ItemAiAnalysis | null;
     createdAt: Date;
     updatedAt: Date;
 }

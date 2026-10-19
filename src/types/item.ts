@@ -1,3 +1,5 @@
+import type { ItemAiAnalysis } from "./ai";
+
 export type ItemStatus = "Lost" | "Found";
 
 export interface Item {
@@ -16,4 +18,5 @@ export interface Item {
   ownerName: string;
   // Owner phone number (required for contact)
   phoneNumber: string;
+  aiAnalysis?: ItemAiAnalysis | null;
 }

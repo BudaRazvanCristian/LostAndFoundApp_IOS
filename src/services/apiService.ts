@@ -4,6 +4,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Item } from "../types/item";
+import type { AnalyzeItemImageRequest, ItemAiAnalysis } from "../types/ai";
 import { ChatConversation, ChatMessage } from "../types/chat";
 import { API_URL, getDevApiUrlCandidates } from "../config/api";
 
@@ -132,6 +133,14 @@ const mapChatMessage = (message: any): ChatMessage => ({
   updatedAt: message.updatedAt,
 });
 
+interface AnalyzeItemImageResponse {
+  analysis: ItemAiAnalysis;
+  available: boolean;
+  provider: string;
+  model: string;
+  message?: string;
+}
+
 /**
  * AUTHENTICATION SERVICES
  */
@@ -255,6 +264,21 @@ export const createPost = async (post: Omit<Item, "id">): Promise<string> => {
   );
 
   return data.post.id;
+};
+
+export const analyzeItemImage = async (
+  payload: AnalyzeItemImageRequest,
+): Promise<AnalyzeItemImageResponse> => {
+  const data = await apiCall(
+    "/posts/analyze-image",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    true,
+  );
+
+  return data as AnalyzeItemImageResponse;
 };
 
 export interface PostFilters {

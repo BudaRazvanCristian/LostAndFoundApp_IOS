@@ -11,7 +11,7 @@ import { GENERATED_LOCAL_API_HOST } from './generatedLocalHost';
  * Setup: Rulează `npm run setup` înainte de `npm start`
  */
 
-const DEV_BACKEND_PORT = process.env.EXPO_PUBLIC_API_PORT || '3000';
+const DEV_BACKEND_PORT = process.env.EXPO_PUBLIC_API_PORT || '5001';
 const PROD_API_URL = 'https://your-app.onrender.com/api';
 const DEV_API_URL = process.env.EXPO_PUBLIC_API_URL;
 

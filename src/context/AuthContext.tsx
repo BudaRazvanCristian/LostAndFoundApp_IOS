@@ -30,13 +30,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const stored = await AsyncStorage.getItem("currentUser");
-        if (stored) {
-          const parsed = JSON.parse(stored) as AuthUser;
-          setUser(parsed);
+        const [storedUser, storedToken] = await Promise.all([
+          AsyncStorage.getItem("currentUser"),
+          AsyncStorage.getItem("authToken"),
+        ]);
+
+        if (!storedUser || !storedToken) {
+          await AsyncStorage.removeItem("currentUser");
+          await AsyncStorage.removeItem("authToken");
+          setUser(null);
+          return;
         }
+
+        const parsed = JSON.parse(storedUser) as AuthUser;
+
+        if (!parsed?.token || parsed.token !== storedToken) {
+          await AsyncStorage.removeItem("currentUser");
+          await AsyncStorage.removeItem("authToken");
+          setUser(null);
+          return;
+        }
+
+        setUser(parsed);
       } catch {
-        // No stored session
+        await AsyncStorage.removeItem("currentUser");
+        await AsyncStorage.removeItem("authToken");
+        setUser(null);
       } finally {
         setIsLoading(false);
       }

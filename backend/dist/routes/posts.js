@@ -8,11 +8,12 @@ const Post_1 = __importDefault(require("../models/Post"));
 const User_1 = __importDefault(require("../models/User"));
 const auth_1 = require("../middleware/auth");
 const notifications_1 = require("../services/notifications");
+const itemAnalysis_1 = require("../services/itemAnalysis");
 const router = (0, express_1.Router)();
 // CREATE POST - Create new post
 router.post("/", auth_1.verifyToken, async (req, res) => {
     try {
-        const { title, description, category, location, latitude, longitude, status, date, ownerName, phoneNumber, imageUri, } = req.body;
+        const { title, description, category, location, latitude, longitude, status, date, ownerName, phoneNumber, imageUri, aiAnalysis, } = req.body;
         // Validate input
         if (!title || !description || !category || !location || !status) {
             return res.status(400).json({
@@ -33,6 +34,7 @@ router.post("/", auth_1.verifyToken, async (req, res) => {
             ownerName,
             phoneNumber,
             imageUri,
+            aiAnalysis: aiAnalysis || null,
         });
         await post.save();
         // Notify other users that a new post was published.
@@ -58,6 +60,28 @@ router.post("/", auth_1.verifyToken, async (req, res) => {
     catch (error) {
         console.error("Post creation error:", error);
         const message = error instanceof Error ? error.message : "Failed to create post";
+        return res.status(500).json({ error: message });
+    }
+});
+// ANALYZE IMAGE - Inspect an uploaded image and return structured AI metadata.
+router.post("/analyze-image", auth_1.verifyToken, async (req, res) => {
+    try {
+        const { imageUri, title, category, status, location, description } = req.body;
+        if (!imageUri || typeof imageUri !== "string") {
+            return res.status(400).json({ error: "Image URI is required" });
+        }
+        const result = await (0, itemAnalysis_1.analyzeItemImage)(imageUri, {
+            title,
+            category,
+            status,
+            location,
+            description,
+        });
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        console.error("AI analysis error:", error);
+        const message = error instanceof Error ? error.message : "Failed to analyze image";
         return res.status(500).json({ error: message });
     }
 });
@@ -138,7 +162,7 @@ router.get("/posts/:id", async (req, res) => {
 router.put("/posts/:id", auth_1.verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, category, location, latitude, longitude, status, date, ownerName, phoneNumber, imageUri, } = req.body;
+        const { title, description, category, location, latitude, longitude, status, date, ownerName, phoneNumber, imageUri, aiAnalysis, } = req.body;
         // Find post and check ownership
         const post = await Post_1.default.findById(id);
         if (!post) {
@@ -160,6 +184,7 @@ router.put("/posts/:id", auth_1.verifyToken, async (req, res) => {
             ownerName: ownerName || post.ownerName,
             phoneNumber: phoneNumber || post.phoneNumber,
             imageUri: imageUri || post.imageUri,
+            aiAnalysis: aiAnalysis ?? post.aiAnalysis ?? null,
         }, { new: true, runValidators: true });
         return res.status(200).json({
             message: "Post updated successfully",

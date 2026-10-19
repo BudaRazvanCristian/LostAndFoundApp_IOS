@@ -20,6 +20,8 @@ import { colors } from "../../constants/colors";
 import { radii, shadows, spacing } from "../../constants/spacing";
 import { useItems } from "../../context/ItemsContext";
 import { useAuth } from "../../context/AuthContext";
+import { analyzeItemImage } from "../../services/apiService";
+import type { ItemAiAnalysis } from "../../types/ai";
 import { ItemStatus } from "../../types/item";
 
 // Load react-native-maps defensively to avoid startup crash if native setup is incomplete.
@@ -69,6 +71,8 @@ const AddPostScreen: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageUploadUri, setImageUploadUri] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<ItemAiAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canSubmit = useMemo(
@@ -139,6 +143,7 @@ const AddPostScreen: React.FC = () => {
       const selectedAsset = result.assets[0];
       setImageUri(selectedAsset.uri);
       setImageUploadUri(buildUploadImageUri(selectedAsset));
+      setAiAnalysis(null);
     }
   };
 
@@ -157,6 +162,43 @@ const AddPostScreen: React.FC = () => {
       const selectedAsset = result.assets[0];
       setImageUri(selectedAsset.uri);
       setImageUploadUri(buildUploadImageUri(selectedAsset));
+      setAiAnalysis(null);
+    }
+  };
+
+  const analyzePhoto = async () => {
+    if (!imageUploadUri) {
+      Alert.alert("Select a photo", "Please choose or capture an image before running AI analysis.");
+      return;
+    }
+
+    setIsAnalyzing(true);
+
+    try {
+      const result = await analyzeItemImage({
+        imageUri: imageUploadUri,
+        title,
+        category,
+        status,
+        location,
+        description,
+      });
+
+      if (!result.available) {
+        Alert.alert("AI not configured", result.message || "Add an AI API key to enable image analysis.");
+        return;
+      }
+
+      setAiAnalysis(result.analysis);
+
+      setTitle((current) => current.trim() || result.analysis.suggestedTitle);
+      setCategory((current) => current.trim() || result.analysis.suggestedCategory);
+      setDescription((current) => current.trim() || result.analysis.shortDescription);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to analyze image";
+      Alert.alert("AI analysis failed", errorMessage);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -192,6 +234,7 @@ const AddPostScreen: React.FC = () => {
         ownerName: ownerName.trim(),
         phoneNumber: phoneNumber.trim(),
         imageUri: imageUploadUri,
+        aiAnalysis,
       });
 
       Alert.alert("Post created", "Your item was added successfully.", [
@@ -210,6 +253,7 @@ const AddPostScreen: React.FC = () => {
       setPhoneNumber(user?.phone || "");
       setImageUri(null);
       setImageUploadUri(null);
+      setAiAnalysis(null);
       setStatus("Lost");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -257,6 +301,54 @@ const AddPostScreen: React.FC = () => {
               <AppButton title="Choose from device" onPress={pickFromLibrary} style={styles.photoButton} />
               <AppButton title="Take a photo" onPress={takePhoto} variant="secondary" style={styles.photoButton} />
             </View>
+
+            <View style={styles.analysisActionWrap}>
+              <AppButton
+                title={isAnalyzing ? "Analyzing..." : aiAnalysis ? "Reanalyze with AI" : "Analyze with AI"}
+                onPress={analyzePhoto}
+                variant="outline"
+                disabled={!imageUploadUri || isAnalyzing}
+              />
+            </View>
+
+            {aiAnalysis ? (
+              <View style={styles.analysisCard}>
+                <Text style={styles.analysisBadge}>AI insights</Text>
+                <Text style={styles.analysisTitle}>{aiAnalysis.suggestedTitle}</Text>
+                <Text style={styles.analysisText}>{aiAnalysis.shortDescription}</Text>
+
+                <View style={styles.analysisGrid}>
+                  <View style={styles.analysisRow}>
+                    <Text style={styles.analysisLabel}>Object</Text>
+                    <Text style={styles.analysisValue}>{aiAnalysis.objectType}</Text>
+                  </View>
+                  <View style={styles.analysisRow}>
+                    <Text style={styles.analysisLabel}>Brand</Text>
+                    <Text style={styles.analysisValue}>{aiAnalysis.brand || "Unknown"}</Text>
+                  </View>
+                  <View style={styles.analysisRow}>
+                    <Text style={styles.analysisLabel}>Primary color</Text>
+                    <Text style={styles.analysisValue}>{aiAnalysis.primaryColor || "Unknown"}</Text>
+                  </View>
+                  <View style={styles.analysisRow}>
+                    <Text style={styles.analysisLabel}>Confidence</Text>
+                    <Text style={styles.analysisValue}>{Math.round(aiAnalysis.confidence * 100)}%</Text>
+                  </View>
+                </View>
+
+                {aiAnalysis.secondaryColors.length > 0 ? (
+                  <Text style={styles.analysisMeta}>
+                    Secondary colors: {aiAnalysis.secondaryColors.join(", ")}
+                  </Text>
+                ) : null}
+
+                {aiAnalysis.distinguishingFeatures.length > 0 ? (
+                  <Text style={styles.analysisMeta}>
+                    Key details: {aiAnalysis.distinguishingFeatures.join(", ")}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
 
             <View style={styles.divider} />
 
@@ -485,6 +577,66 @@ const styles = StyleSheet.create({
   },
   photoButton: {
     flex: 1,
+  },
+  analysisActionWrap: {
+    marginTop: spacing.md,
+  },
+  analysisCard: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  analysisBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  analysisTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 6,
+  },
+  analysisText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
+  },
+  analysisGrid: {
+    gap: spacing.sm,
+  },
+  analysisRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  analysisLabel: {
+    fontSize: 13,
+    color: colors.textMuted,
+    flexShrink: 0,
+  },
+  analysisValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.text,
+    flex: 1,
+    textAlign: "right",
+  },
+  analysisMeta: {
+    marginTop: spacing.sm,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textMuted,
   },
   divider: {
     height: 1,
