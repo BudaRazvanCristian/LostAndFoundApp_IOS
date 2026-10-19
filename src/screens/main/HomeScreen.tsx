@@ -8,7 +8,7 @@ import ItemCard from "../../components/ItemCard";
 import ScreenContainer from "../../components/ScreenContainer";
 import { colors } from "../../constants/colors";
 import { useItems } from "../../context/ItemsContext";
-import { radii, spacing, shadows } from "../../constants/spacing";
+import { spacing, shadows } from "../../constants/spacing";
 import { Item } from "../../types/item";
 import type { MainStackParamList } from "../../navigation/MainNavigator";
 
@@ -48,24 +48,6 @@ const HomeScreen: React.FC = () => {
             activeOpacity={0.7}
           >
             <Ionicons name="notifications" size={20} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Quick Stats Banner */}
-        <View style={[styles.banner, shadows.md]}>
-          <View style={styles.bannerContent}>
-            <View style={styles.bannerIcon}>
-              <Ionicons name="alert-circle" size={24} color={colors.primary} />
-            </View>
-            <View style={styles.bannerText}>
-              <Text style={styles.bannerTitle}>Stay Alert</Text>
-              <Text style={styles.bannerDescription}>
-                Enable notifications to get instant updates on matches
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.bannerCTA} activeOpacity={0.8}>
-            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -170,56 +152,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border,
-  },
-  banner: {
-    marginHorizontal: spacing.xxxl,
-    marginBottom: spacing.xxl,
-    backgroundColor: colors.primarySoft,
-    borderRadius: radii.xxl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.primaryLight,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  bannerContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  bannerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.lg,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    opacity: 0.1,
-  },
-  bannerText: {
-    flex: 1,
-  },
-  bannerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 4,
-  },
-  bannerDescription: {
-    fontSize: 13,
-    color: colors.textMuted,
-    lineHeight: 18,
-  },
-  bannerCTA: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surface,
-    marginLeft: spacing.md,
   },
   section: {
     marginBottom: spacing.xxl,

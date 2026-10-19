@@ -114,7 +114,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await apiService.updatePushToken(null);
     } catch {
-      // Best effort only; continue logout even if token removal fails.
     }
     await apiService.logoutUser();
     await AsyncStorage.removeItem("currentUser");
