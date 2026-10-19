@@ -6,7 +6,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -362,19 +361,6 @@ const AddPostScreen: React.FC = () => {
               />
             </View>
 
-            <View style={styles.switchRow}>
-              <View style={styles.switchTextWrap}>
-                <Text style={styles.sectionTitle}>Visible now</Text>
-                <Text style={styles.sectionText}>Keep the post public as soon as you create it.</Text>
-              </View>
-              <Switch
-                value
-                onValueChange={() => undefined}
-                trackColor={{ false: colors.border, true: colors.primarySoft }}
-                thumbColor={colors.primary}
-              />
-            </View>
-
             <View style={styles.submitWrap}>
               <AppButton
                 title={isSubmitting ? "Saving..." : "Create post"}
@@ -570,17 +556,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     color: colors.textMuted,
     fontSize: 12,
-  },
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  switchTextWrap: {
-    flex: 1,
   },
   submitWrap: {
     marginTop: spacing.xs,
