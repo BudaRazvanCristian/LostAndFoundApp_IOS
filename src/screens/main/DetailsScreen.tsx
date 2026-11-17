@@ -1,9 +1,22 @@
-import React, { useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, Alert, Linking, Platform } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Alert,
+  Linking,
+  Platform,
+} from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import AppButton from "../../components/AppButton";
 import InfoCard from "../../components/InfoCard";
+import MatchCard from "../../components/MatchCard";
+import type { PostMatch } from "../../types/match";
 import { colors } from "../../constants/colors";
 import { radii, shadows, spacing } from "../../constants/spacing";
 import { MainStackParamList } from "../../navigation/MainNavigator";
@@ -34,6 +47,32 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
   const isOwner = useMemo(() => {
     return Boolean(user?.id && item.userId && user.id === item.userId);
   }, [item.userId, user?.id]);
+
+  const [matches, setMatches] = useState<PostMatch[]>([]);
+  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+  const [matchesError, setMatchesError] = useState<string | null>(null);
+  const oppositeStatus = item.status === "Lost" ? "Found" : "Lost";
+
+  const loadMatches = useCallback(async () => {
+    if (!user) return;
+
+    setIsLoadingMatches(true);
+    setMatchesError(null);
+    try {
+      setMatches(await apiService.getPostMatches(item.id));
+    } catch (error) {
+      setMatchesError(error instanceof Error ? error.message : "Failed to load matches");
+    } finally {
+      setIsLoadingMatches(false);
+    }
+  }, [item.id, user]);
+
+  useEffect(() => {
+    loadMatches().catch(() => undefined);
+  }, [loadMatches]);
+
+  // Owners always see the section (with an empty state); others only when there is something to show.
+  const showMatchesSection = Boolean(user) && (isOwner || isLoadingMatches || matches.length > 0);
 
   const handleEdit = () => {
     navigation.navigate("EditPost", { item });
@@ -155,6 +194,48 @@ const DetailsScreen: React.FC<DetailsScreenProps> = ({ navigation, route }) => {
 
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.description}>{item.description}</Text>
+
+          {showMatchesSection && (
+            <View style={styles.matchesSection}>
+              <View style={styles.matchesHeader}>
+                <Ionicons name="sparkles" size={16} color={colors.primaryDark} />
+                <Text style={styles.matchesTitle}>
+                  {isOwner ? "Possible matches for your item" : `Similar ${oppositeStatus.toLowerCase()} reports`}
+                </Text>
+              </View>
+              <Text style={styles.matchesHint}>
+                Compared automatically using the AI photo analysis, color, brand, location and date.
+              </Text>
+
+              {isLoadingMatches && matches.length === 0 ? (
+                <View style={styles.matchesState}>
+                  <ActivityIndicator color={colors.primary} />
+                  <Text style={styles.matchesStateText}>Looking for {oppositeStatus.toLowerCase()} items...</Text>
+                </View>
+              ) : matchesError ? (
+                <View style={styles.matchesState}>
+                  <Text style={styles.matchesStateText}>Could not load matches.</Text>
+                  <Pressable onPress={() => loadMatches()} style={styles.retryButton}>
+                    <Text style={styles.retryButtonText}>Try again</Text>
+                  </Pressable>
+                </View>
+              ) : matches.length === 0 ? (
+                <View style={styles.matchesState}>
+                  <Text style={styles.matchesStateText}>
+                    No similar {oppositeStatus.toLowerCase()} items yet. You will get a notification when one is posted.
+                  </Text>
+                </View>
+              ) : (
+                matches.map((match) => (
+                  <MatchCard
+                    key={match.item.id}
+                    match={match}
+                    onPress={() => navigation.push("Details", { item: match.item })}
+                  />
+                ))
+              )}
+            </View>
+          )}
 
           {typeof item.latitude === "number" && typeof item.longitude === "number" && (
             <>
@@ -357,6 +438,51 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.textMuted,
     marginBottom: spacing.lg,
+  },
+  matchesSection: {
+    marginBottom: spacing.lg,
+  },
+  matchesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  matchesTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  matchesHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
+  },
+  matchesState: {
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  matchesStateText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
+  retryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.full,
+    backgroundColor: colors.primarySoft,
+  },
+  retryButtonText: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "700",
   },
   mapWrap: {
     borderRadius: radii.lg,

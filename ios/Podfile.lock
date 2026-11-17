@@ -46,6 +46,9 @@ PODS:
     - ExpoModulesCore
   - ExpoFont (55.0.8):
     - ExpoModulesCore
+  - ExpoImageManipulator (55.0.21):
+    - ExpoModulesCore
+    - SDWebImageWebPCoder
   - ExpoImagePicker (55.0.20):
     - ExpoModulesCore
   - ExpoKeepAwake (55.0.8):
@@ -96,6 +99,18 @@ PODS:
   - hermes-engine (0.14.1):
     - hermes-engine/Pre-built (= 0.14.1)
   - hermes-engine/Pre-built (0.14.1)
+  - libwebp (1.6.0):
+    - libwebp/demux (= 1.6.0)
+    - libwebp/mux (= 1.6.0)
+    - libwebp/sharpyuv (= 1.6.0)
+    - libwebp/webp (= 1.6.0)
+  - libwebp/demux (1.6.0):
+    - libwebp/webp
+  - libwebp/mux (1.6.0):
+    - libwebp/demux
+  - libwebp/sharpyuv (1.6.0)
+  - libwebp/webp (1.6.0):
+    - libwebp/sharpyuv
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -2771,6 +2786,10 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - SDWebImage/Core (5.21.7)
+  - SDWebImageWebPCoder (0.15.0):
+    - libwebp (~> 1.0)
+    - SDWebImage/Core (~> 5.17)
   - SocketRocket (0.7.1)
   - Yoga (0.0.0)
 
@@ -2785,6 +2804,7 @@ DEPENDENCIES:
   - "ExpoDomWebView (from `../node_modules/expo/node_modules/@expo/log-box/node_modules/@expo/dom-webview/ios`)"
   - ExpoFileSystem (from `../node_modules/expo/node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
+  - ExpoImageManipulator (from `../node_modules/expo-image-manipulator/ios`)
   - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../node_modules/expo/node_modules/expo-keep-awake/ios`)
   - "ExpoLogBox (from `../node_modules/expo/node_modules/@expo/log-box`)"
@@ -2875,6 +2895,9 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - libwebp
+    - SDWebImage
+    - SDWebImageWebPCoder
     - SocketRocket
 
 EXTERNAL SOURCES:
@@ -2898,6 +2921,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo/node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../node_modules/expo-font/ios"
+  ExpoImageManipulator:
+    :path: "../node_modules/expo-image-manipulator/ios"
   ExpoImagePicker:
     :path: "../node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
@@ -3081,6 +3106,7 @@ SPEC CHECKSUMS:
   ExpoDomWebView: b2e9d601f9cb77d3c97da73234e175b64be91928
   ExpoFileSystem: 61e663d0bbd1a973d324530d1d6ee559a5e5192c
   ExpoFont: a7e34a75bdfb703fa07a0e87807f836236608c76
+  ExpoImageManipulator: 6ee60a0202c350d82d99fd48773d7c2e770f80ea
   ExpoImagePicker: 7c75b2f076d6f45598fcbd035908aebc4c2eb257
   ExpoKeepAwake: d0eb7a0719500d2a43fbf29b6f79e84d70c75ebf
   ExpoLogBox: a678d36477ab9544fe63e0b5328a0716539b6774
@@ -3092,6 +3118,7 @@ SPEC CHECKSUMS:
   fmt: 530618a01105dae0fa3a2f27c81ae11fa8f67eac
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
   hermes-engine: cc4d787ee0bb47d95266838443e88ab4266b50a2
+  libwebp: af5937a13536ef73f3784d69cc342b98961acf33
   RCT-Folly: b29feb752b08042c62badaef7d453f3bb5e6ae23
   RCTDeprecation: c5e70bcdbc24b9edbca24b96f3997319f01ba8fb
   RCTRequired: 7fbf6c9b97de59aab5c6a1ca5a5d91555d5ba403
@@ -3165,6 +3192,8 @@ SPEC CHECKSUMS:
   ReactCommon: e788387a0b387a927a2a5d041fab09472fe8dedc
   RNCAsyncStorage: 6161dbb167973ab36a7800c5deb506ed854f2c33
   RNScreens: afaf526a9c804c3b4503f950cf3e67ed81e29ada
+  SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
+  SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: cf2a67aa1c8a225f0cb98a5f531d6f305d3f12e5
 

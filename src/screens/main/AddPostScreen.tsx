@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -13,15 +13,20 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 
 import AppButton from "../../components/AppButton";
 import { colors } from "../../constants/colors";
 import { radii, shadows, spacing } from "../../constants/spacing";
 import { useItems } from "../../context/ItemsContext";
 import { useAuth } from "../../context/AuthContext";
-import { analyzeItemImage } from "../../services/apiService";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
+import { analyzeItemImage, getPostMatches } from "../../services/apiService";
+import type { MainStackParamList } from "../../navigation/MainNavigator";
 import type { ItemAiAnalysis } from "../../types/ai";
-import { ItemStatus } from "../../types/item";
+import { Item, ItemStatus } from "../../types/item";
 
 // Load react-native-maps defensively to avoid startup crash if native setup is incomplete.
 let mapsLib: any;
@@ -54,9 +59,33 @@ const buildUploadImageUri = (asset: ImagePicker.ImagePickerAsset): string => {
   return asset.uri;
 };
 
+const compressImageForUpload = async (sourceUri: string): Promise<string> => {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      sourceUri,
+      [{ resize: { width: 1200 } }],
+      {
+        compress: 0.6,
+        format: ImageManipulator.SaveFormat.JPEG,
+        base64: true,
+      },
+    );
+
+    if (result.base64) {
+      return `data:image/jpeg;base64,${result.base64}`;
+    }
+
+    return result.uri || sourceUri;
+  } catch (error) {
+    console.warn("Image compression failed, falling back to original image:", error);
+    return sourceUri;
+  }
+};
+
 const AddPostScreen: React.FC = () => {
   const { addItem } = useItems();
   const { user, isAuthenticated } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
 
   const [status, setStatus] = useState<ItemStatus>("Lost");
   const [title, setTitle] = useState("");
@@ -72,6 +101,8 @@ const AddPostScreen: React.FC = () => {
   const [imageUploadUri, setImageUploadUri] = useState<string | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<ItemAiAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // Last AI suggestion written into the form (survives photo changes, unlike aiAnalysis).
+  const lastAppliedAiRef = useRef<ItemAiAnalysis | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canSubmit = useMemo(
@@ -134,14 +165,16 @@ const AddPostScreen: React.FC = () => {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.9,
+      quality: 0.45,
       base64: true,
     });
 
     if (!result.canceled) {
       const selectedAsset = result.assets[0];
+      const compressedUri = await compressImageForUpload(selectedAsset.uri);
+
       setImageUri(selectedAsset.uri);
-      setImageUploadUri(buildUploadImageUri(selectedAsset));
+      setImageUploadUri(compressedUri || buildUploadImageUri(selectedAsset));
       setAiAnalysis(null);
     }
   };
@@ -153,14 +186,16 @@ const AddPostScreen: React.FC = () => {
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.9,
+      quality: 0.45,
       base64: true,
     });
 
     if (!result.canceled) {
       const selectedAsset = result.assets[0];
+      const compressedUri = await compressImageForUpload(selectedAsset.uri);
+
       setImageUri(selectedAsset.uri);
-      setImageUploadUri(buildUploadImageUri(selectedAsset));
+      setImageUploadUri(compressedUri || buildUploadImageUri(selectedAsset));
       setAiAnalysis(null);
     }
   };
@@ -174,8 +209,12 @@ const AddPostScreen: React.FC = () => {
     setIsAnalyzing(true);
 
     try {
+      const analysisImageUri = imageUploadUri.startsWith("data:")
+        ? imageUploadUri
+        : await compressImageForUpload(imageUploadUri);
+
       const result = await analyzeItemImage({
-        imageUri: imageUploadUri,
+        imageUri: analysisImageUri,
         title,
         category,
         status,
@@ -184,15 +223,34 @@ const AddPostScreen: React.FC = () => {
       });
 
       if (!result.available) {
-        Alert.alert("AI not configured", result.message || "Add an AI API key to enable image analysis.");
+        const isMissingConfig = (result.message || "").toLowerCase().includes("not configured");
+        Alert.alert(
+          isMissingConfig ? "AI not configured" : "AI temporarily unavailable",
+          result.message || "Add an AI API key to enable image analysis.",
+        );
         return;
       }
 
+      const previousAnalysis = lastAppliedAiRef.current;
+      lastAppliedAiRef.current = result.analysis;
+      // Fill a field when it is empty or still holds the previous AI suggestion,
+      // so "Reanalyze" refreshes AI text but never overwrites what the user typed.
+      const applySuggestion = (current: string, previous: string | undefined, next: string) => {
+        const trimmed = current.trim();
+        return !trimmed || (previous !== undefined && trimmed === previous.trim()) ? next : current;
+      };
+
       setAiAnalysis(result.analysis);
 
-      setTitle((current) => current.trim() || result.analysis.suggestedTitle);
-      setCategory((current) => current.trim() || result.analysis.suggestedCategory);
-      setDescription((current) => current.trim() || result.analysis.shortDescription);
+      setTitle((current) =>
+        applySuggestion(current, previousAnalysis?.suggestedTitle, result.analysis.suggestedTitle),
+      );
+      setCategory((current) =>
+        applySuggestion(current, previousAnalysis?.suggestedCategory, result.analysis.suggestedCategory),
+      );
+      setDescription((current) =>
+        applySuggestion(current, previousAnalysis?.shortDescription, result.analysis.shortDescription),
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to analyze image";
       Alert.alert("AI analysis failed", errorMessage);
@@ -221,7 +279,7 @@ const AddPostScreen: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await addItem({
+      const newItem: Omit<Item, "id"> = {
         title: title.trim(),
         status,
         category: category.trim(),
@@ -234,11 +292,31 @@ const AddPostScreen: React.FC = () => {
         phoneNumber: phoneNumber.trim(),
         imageUri: imageUploadUri,
         aiAnalysis,
-      });
+      };
+      const postId = await addItem(newItem);
+      const createdItem: Item = { ...newItem, id: postId, userId: user?.id };
 
-      Alert.alert("Post created", "Your item was added successfully.", [
-        { text: "OK" },
-      ]);
+      // Tell the author right away if similar Lost/Found posts already exist.
+      let matchCount = 0;
+      try {
+        matchCount = (await getPostMatches(postId)).length;
+      } catch (matchError) {
+        console.warn("Could not check matches for the new post:", matchError);
+      }
+
+      if (matchCount > 0) {
+        const opposite = status === "Lost" ? "found" : "lost";
+        Alert.alert(
+          "Post created",
+          `We found ${matchCount} ${opposite} item${matchCount === 1 ? "" : "s"} that might be yours.`,
+          [
+            { text: "Later", style: "cancel" },
+            { text: "View matches", onPress: () => navigation.navigate("Details", { item: createdItem }) },
+          ],
+        );
+      } else {
+        Alert.alert("Post created", "Your item was added successfully.", [{ text: "OK" }]);
+      }
 
       // Reset form
       setTitle("");
@@ -253,6 +331,7 @@ const AddPostScreen: React.FC = () => {
       setImageUri(null);
       setImageUploadUri(null);
       setAiAnalysis(null);
+      lastAppliedAiRef.current = null;
       setStatus("Lost");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";

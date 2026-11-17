@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest",
-    "check:ai": "ts-node scripts/check-item-analysis.ts"
+    "check:ai": "ts-node scripts/check-item-analysis.ts",
+    "check:matching": "ts-node scripts/check-matching.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

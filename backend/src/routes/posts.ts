@@ -1,9 +1,11 @@
 import { Router, Request, Response } from "express";
+import mongoose from "mongoose";
 import Post from "../models/Post";
 import User from "../models/User";
 import { verifyToken } from "../middleware/auth";
 import { sendPushToMany } from "../services/notifications";
 import { analyzeItemImage } from "../services/itemAnalysis";
+import { findMatchesForPostWithDetails, notifyMatchesForNewPost } from "../services/postMatches";
 
 const router = Router();
 
@@ -69,6 +71,9 @@ router.post("/", verifyToken, async (req: Request, res: Response) => {
         status,
       },
     );
+
+    // Look for matching Lost/Found posts in the background so the response is not delayed.
+    void notifyMatchesForNewPost(post.toObject());
 
     return res.status(201).json({
       message: "Post created successfully",
@@ -195,6 +200,30 @@ router.get("/posts/:id", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Post fetch error:", error);
     return res.status(500).json({ error: "Failed to fetch post" });
+  }
+});
+
+// GET POSSIBLE MATCHES - Opposite-status posts that look like the same object.
+router.get("/posts/:id/matches", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const post = await Post.findById(id).select("-imageUri").lean();
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const matches = await findMatchesForPostWithDetails(post as any);
+
+    return res.status(200).json({ matches });
+  } catch (error) {
+    console.error("Post matches error:", error);
+    return res.status(500).json({ error: "Failed to find matches" });
   }
 });
 

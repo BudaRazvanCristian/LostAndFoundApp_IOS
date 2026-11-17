@@ -4,11 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const mongoose_1 = __importDefault(require("mongoose"));
 const Post_1 = __importDefault(require("../models/Post"));
 const User_1 = __importDefault(require("../models/User"));
 const auth_1 = require("../middleware/auth");
 const notifications_1 = require("../services/notifications");
 const itemAnalysis_1 = require("../services/itemAnalysis");
+const postMatches_1 = require("../services/postMatches");
 const router = (0, express_1.Router)();
 // CREATE POST - Create new post
 router.post("/", auth_1.verifyToken, async (req, res) => {
@@ -49,6 +51,8 @@ router.post("/", auth_1.verifyToken, async (req, res) => {
             postId: post._id.toString(),
             status,
         });
+        // Look for matching Lost/Found posts in the background so the response is not delayed.
+        void (0, postMatches_1.notifyMatchesForNewPost)(post.toObject());
         return res.status(201).json({
             message: "Post created successfully",
             post: {
@@ -156,6 +160,25 @@ router.get("/posts/:id", async (req, res) => {
     catch (error) {
         console.error("Post fetch error:", error);
         return res.status(500).json({ error: "Failed to fetch post" });
+    }
+});
+// GET POSSIBLE MATCHES - Opposite-status posts that look like the same object.
+router.get("/posts/:id/matches", auth_1.verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose_1.default.isValidObjectId(id)) {
+            return res.status(404).json({ error: "Post not found" });
+        }
+        const post = await Post_1.default.findById(id).select("-imageUri").lean();
+        if (!post) {
+            return res.status(404).json({ error: "Post not found" });
+        }
+        const matches = await (0, postMatches_1.findMatchesForPostWithDetails)(post);
+        return res.status(200).json({ matches });
+    }
+    catch (error) {
+        console.error("Post matches error:", error);
+        return res.status(500).json({ error: "Failed to find matches" });
     }
 });
 // UPDATE POST

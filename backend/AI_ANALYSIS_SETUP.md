@@ -21,9 +21,9 @@ Set these in your backend `.env` file:
 ```env
 AI_API_KEY=your_api_key_here
 AI_PROVIDER=gemini
-AI_MODEL=models/gemini-3.8-flash
-# Optional: try extra Gemini models if the main one is overloaded
-# AI_MODEL_FALLBACKS=models/gemini-3.8-flash-lite,models/gemini-2.5-flash
+AI_MODEL=models/gemini-3.5-flash-lite
+# Optional: models tried in order if the main one is overloaded or retired
+AI_MODEL_FALLBACKS=models/gemini-3.1-flash-lite,models/gemini-3.8-flash
 ```
 
 ### Optional: OpenAI-compatible mode

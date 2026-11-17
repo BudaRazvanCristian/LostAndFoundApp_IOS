@@ -16,36 +16,44 @@ export interface AnalyzeItemImageResult {
 export type AIProvider = "gemini" | "openai-compatible";
 
 const DEFAULT_PROVIDER: AIProvider = "gemini";
-const DEFAULT_GEMINI_MODEL = "models/gemini-3.8-flash";
+const DEFAULT_GEMINI_MODEL = "models/gemini-3.5-flash-lite";
+// Used only when AI_MODEL_FALLBACKS is not set in .env.
+const DEFAULT_GEMINI_FALLBACK_MODELS = ["gemini-3.1-flash-lite", "gemini-3.8-flash"];
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const GEMINI_ENDPOINT_PREFIX = "https://generativelanguage.googleapis.com/v1beta/models/";
-const GEMINI_RETRYABLE_STATUS_CODES = new Set([429, 503, 504]);
-const GEMINI_MAX_ATTEMPTS_PER_MODEL = 3;
-const GEMINI_RETRY_BASE_DELAY_MS = 750;
+const GEMINI_RETRYABLE_STATUS_CODES = new Set([429, 500, 503, 504]);
+// 404 = model retired / not available for this key: skip straight to the next model.
+const GEMINI_SKIP_MODEL_STATUS_CODES = new Set([404]);
+const GEMINI_MAX_ATTEMPTS_PER_MODEL = 2;
+const GEMINI_RETRY_BASE_DELAY_MS = 500;
+const AI_REQUEST_TIMEOUT_MS = 25000;
+// Upper bound for the whole analysis so the app never waits for minutes.
+const GEMINI_TOTAL_BUDGET_MS = 60000;
+const GEMINI_MAX_OUTPUT_TOKENS = 1024;
 
 const GEMINI_ANALYSIS_RESPONSE_SCHEMA = {
-  type: "object",
+  type: "OBJECT",
   properties: {
-    objectType: { type: "string" },
-    brand: { type: ["string", "null"] },
-    primaryColor: { type: ["string", "null"] },
+    objectType: { type: "STRING" },
+    brand: { type: "STRING", nullable: true },
+    primaryColor: { type: "STRING", nullable: true },
     secondaryColors: {
-      type: "array",
-      items: { type: "string" },
+      type: "ARRAY",
+      items: { type: "STRING" },
     },
-    material: { type: ["string", "null"] },
+    material: { type: "STRING", nullable: true },
     distinguishingFeatures: {
-      type: "array",
-      items: { type: "string" },
+      type: "ARRAY",
+      items: { type: "STRING" },
     },
     visibleText: {
-      type: "array",
-      items: { type: "string" },
+      type: "ARRAY",
+      items: { type: "STRING" },
     },
-    shortDescription: { type: "string" },
-    suggestedTitle: { type: "string" },
-    suggestedCategory: { type: "string" },
-    confidence: { type: "number" },
+    shortDescription: { type: "STRING" },
+    suggestedTitle: { type: "STRING" },
+    suggestedCategory: { type: "STRING" },
+    confidence: { type: "NUMBER" },
   },
   required: [
     "objectType",
@@ -60,7 +68,6 @@ const GEMINI_ANALYSIS_RESPONSE_SCHEMA = {
     "suggestedCategory",
     "confidence",
   ],
-  additionalProperties: false,
 } as const;
 
 class AIRequestError extends Error {
@@ -154,11 +161,17 @@ const uniqueModels = (models: string[]): string[] => {
 
 const isRetryableGeminiError = (error: unknown): boolean => {
   if (error instanceof AIRequestError) {
-    return Boolean(error.statusCode && GEMINI_RETRYABLE_STATUS_CODES.has(error.statusCode));
+    if (error.statusCode && GEMINI_RETRYABLE_STATUS_CODES.has(error.statusCode)) {
+      return true;
+    }
+
+    return /timed out|timeout|not found for api version|not supported for generatecontent|temporarily unavailable|rate limit|too many requests|service unavailable|gateway timeout/i.test(
+      error.message,
+    );
   }
 
   if (error instanceof Error) {
-    return /high demand|temporarily unavailable|rate limit|too many requests|service unavailable|gateway timeout/i.test(
+    return /high demand|timed out|timeout|not found for api version|not supported for generatecontent|temporarily unavailable|rate limit|too many requests|service unavailable|gateway timeout/i.test(
       error.message,
     );
   }
@@ -175,8 +188,26 @@ const isInvalidGeminiJsonError = (error: unknown): boolean => {
 };
 
 const buildGeminiModelCandidates = (preferredModel: string, fallbackModels?: string | null): string[] => {
-  const candidates = [preferredModel, ...parseFallbackModels(fallbackModels)];
+  const configuredFallbacks = parseFallbackModels(fallbackModels);
+  const fallbacks = configuredFallbacks.length > 0 ? configuredFallbacks : DEFAULT_GEMINI_FALLBACK_MODELS;
+  const candidates = [preferredModel, ...fallbacks];
   return uniqueModels(candidates.map((model) => normalizeGeminiModelId(model)));
+};
+
+const extractProviderErrorMessage = (error: unknown): string => {
+  if (error instanceof AIRequestError && error.responseBody) {
+    try {
+      const parsed = JSON.parse(error.responseBody);
+      const message = normalizeText(parsed?.error?.message);
+      if (message) {
+        return message;
+      }
+    } catch {
+      // Not JSON - fall through to the generic message.
+    }
+  }
+
+  return error instanceof Error ? error.message : String(error);
 };
 
 const parseDataUri = (uri: string): { mimeType: string; base64: string } | null => {
@@ -340,7 +371,12 @@ const normalizeAnalysis = (
   };
 };
 
-const postJson = async <T>(endpoint: string, headers: Record<string, string>, body: unknown): Promise<T> => {
+const postJson = async <T>(
+  endpoint: string,
+  headers: Record<string, string>,
+  body: unknown,
+  timeoutMs = AI_REQUEST_TIMEOUT_MS,
+): Promise<T> => {
   const url = new URL(endpoint);
   const payload = JSON.stringify(body);
 
@@ -352,6 +388,7 @@ const postJson = async <T>(endpoint: string, headers: Record<string, string>, bo
         port: url.port || (url.protocol === "https:" ? 443 : 80),
         path: `${url.pathname}${url.search}`,
         method: "POST",
+        timeout: timeoutMs,
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payload),
@@ -385,6 +422,10 @@ const postJson = async <T>(endpoint: string, headers: Record<string, string>, bo
         });
       },
     );
+
+    request.setTimeout(timeoutMs, () => {
+      request.destroy(new AIRequestError(`AI request timed out after ${Math.round(timeoutMs / 1000)} seconds.`));
+    });
 
     request.on("error", reject);
     request.write(payload);
@@ -505,13 +546,20 @@ const analyzeWithGemini = async (
     throw new Error("Gemini requires the image to be sent as a data URI from the app.");
   }
 
-  const candidates = buildGeminiModelCandidates(model, process.env.AI_MODEL_FALLBACKS);
+  const candidateModels = buildGeminiModelCandidates(model, process.env.AI_MODEL_FALLBACKS);
+  const deadline = Date.now() + GEMINI_TOTAL_BUDGET_MS;
   let lastError: unknown = null;
+  let lastErrorModel: string | null = null;
 
-  for (const candidateModel of candidates) {
+  modelLoop: for (const candidateModel of candidateModels) {
     const endpoint = `${GEMINI_ENDPOINT_PREFIX}${encodeURIComponent(candidateModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS_PER_MODEL; attempt += 1) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs < 3000) {
+        break modelLoop;
+      }
+
       try {
         const response = await postJson<any>(endpoint, {}, {
           systemInstruction: {
@@ -539,11 +587,11 @@ const analyzeWithGemini = async (
           ],
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 500,
+            maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
             responseMimeType: "application/json",
             responseSchema: GEMINI_ANALYSIS_RESPONSE_SCHEMA,
           },
-        });
+        }, Math.min(AI_REQUEST_TIMEOUT_MS, remainingMs));
 
         const geminiContent = extractGeminiContent(response);
         const analysis = normalizeAnalysis(geminiContent, request, "gemini", candidateModel);
@@ -556,32 +604,53 @@ const analyzeWithGemini = async (
         };
       } catch (error) {
         lastError = error;
+        lastErrorModel = candidateModel;
+        console.warn(
+          `[AI] Gemini model ${candidateModel} attempt ${attempt} failed: ${extractProviderErrorMessage(error).slice(0, 200)}`,
+        );
+
+        const isModelUnavailable =
+          error instanceof AIRequestError && error.statusCode && GEMINI_SKIP_MODEL_STATUS_CODES.has(error.statusCode);
+        const isTimeout = error instanceof Error && /timed out/i.test(error.message);
+
+        // A retired model or a model that hangs will not recover on retry: move on.
+        if (isModelUnavailable || isTimeout) {
+          continue modelLoop;
+        }
 
         if (!isRetryableGeminiError(error) && !isInvalidGeminiJsonError(error)) {
-          throw error;
+          throw new Error(`AI analysis failed: ${extractProviderErrorMessage(error)}`);
         }
 
         if (attempt < GEMINI_MAX_ATTEMPTS_PER_MODEL) {
-          const delayMs = GEMINI_RETRY_BASE_DELAY_MS * attempt;
-          await sleep(delayMs);
-          continue;
+          await sleep(GEMINI_RETRY_BASE_DELAY_MS * attempt);
         }
       }
     }
   }
 
-  const fallbackMessage =
-    lastError instanceof Error
-      ? /valid JSON object|unexpected token|unterminated|JSON/i.test(lastError.message)
-        ? `Gemini returned an invalid JSON response. Please try again in a moment. Last error: ${lastError.message}`
-        : `Gemini is currently under high demand. Please try again in a moment. Last error: ${lastError.message}`
-      : "Gemini is currently under high demand. Please try again in a moment.";
+  const lastErrorStatus = lastError instanceof AIRequestError ? lastError.statusCode : undefined;
+  const lastErrorDetail = lastError ? extractProviderErrorMessage(lastError) : null;
+  let fallbackMessage: string;
+
+  if (lastErrorStatus && GEMINI_SKIP_MODEL_STATUS_CODES.has(lastErrorStatus)) {
+    fallbackMessage =
+      "None of the configured Gemini models are available for this API key. Update AI_MODEL / AI_MODEL_FALLBACKS in backend/.env.";
+  } else if (isInvalidGeminiJsonError(lastError)) {
+    fallbackMessage = "The AI returned an unreadable answer. Please try again.";
+  } else {
+    fallbackMessage = "The AI service is busy right now. Please try again in a moment.";
+  }
+
+  console.warn(
+    `[AI] All Gemini models failed (${candidateModels.join(", ")}). Last error from ${lastErrorModel}: ${lastErrorDetail}`,
+  );
 
   return {
     analysis: buildFallbackAnalysis(request, fallbackMessage),
     available: false,
     provider: "gemini",
-    model: candidates[0] || model,
+    model: candidateModels[0] || model,
     message: fallbackMessage,
   };
 };
@@ -630,13 +699,3 @@ export {
   getDefaultModel,
   extractGeminiContent,
 };
-
-
-
-
-
-
-
-
-
-

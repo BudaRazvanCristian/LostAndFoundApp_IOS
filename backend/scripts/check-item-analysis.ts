@@ -36,7 +36,7 @@ assert.ok(extractedJson, "JSON should be extracted from fenced AI output");
 assert.strictEqual(resolveProvider(undefined), "gemini");
 assert.strictEqual(resolveProvider("gemini"), "gemini");
 assert.strictEqual(resolveProvider("openai"), "openai-compatible");
-assert.strictEqual(getDefaultModel("gemini"), "models/gemini-3.8-flash");
+assert.strictEqual(getDefaultModel("gemini"), "models/gemini-3.5-flash-lite");
 assert.strictEqual(getDefaultModel("openai-compatible"), "gpt-4o-mini");
 
 const parsedImage = parseDataUri("data:image/png;base64,ZmFrZS1kYXRh");

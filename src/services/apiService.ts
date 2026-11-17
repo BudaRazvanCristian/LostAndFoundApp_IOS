@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Item } from "../types/item";
 import type { AnalyzeItemImageRequest, ItemAiAnalysis } from "../types/ai";
 import { ChatConversation, ChatMessage } from "../types/chat";
+import type { PostMatch } from "../types/match";
 import { API_URL, getDevApiUrlCandidates } from "../config/api";
 
 const API_BASE_URLS = __DEV__ ? getDevApiUrlCandidates() : [API_URL];
@@ -359,6 +360,20 @@ export const updatePost = async (
     },
     true
   );
+};
+
+export const getPostMatches = async (postId: string): Promise<PostMatch[]> => {
+  const data = await apiCall(
+    `/posts/posts/${postId}/matches`,
+    { method: "GET" },
+    true,
+  );
+
+  return (data.matches || []).map((match: any) => ({
+    item: mapPostToItem(match.post),
+    score: Number(match.score) || 0,
+    reasons: Array.isArray(match.reasons) ? match.reasons : [],
+  }));
 };
 
 export const deletePost = async (postId: string): Promise<void> => {
