@@ -76,3 +76,6 @@ yarn-error.log
 
 # Local project archive (too large for GitHub)
 LostAndFound.zip
+
+# Secrets - copy backend/.env.example to backend/.env and fill it in
+backend/.env
